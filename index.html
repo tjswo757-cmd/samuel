@@ -1558,6 +1558,8 @@
                 </div>
             </div>
             <div class="nav-btn-group">
+                <span class="nav-btn online-badge" id="onlineCount" title="지금 접속 중인 인원">👥 –</span>
+                <button class="nav-btn auth-btn" id="authBtn" onclick="samuelToggleAuth()" title="구글 로그인">👤</button>
                 <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()" title="전체화면" aria-label="전체화면">⛶</button>
                 <button class="nav-btn theme-toggle-btn" onclick="toggleTheme()" title="다크모드 전환" aria-label="다크모드 전환">🌙</button>
                 <button class="nav-btn" onclick="goBack()">◀</button>
@@ -6358,5 +6360,156 @@ function initScriptSwipeAndZoom(isPC) {
     }
 }
 </script>
+<style>
+  .online-badge { font-size: 0.78em; padding: 0 8px; display: inline-flex; align-items: center; cursor: default; white-space: nowrap; opacity: 0.85; }
+  .auth-btn { font-size: 1.1em; }
+</style>
+
+<!-- ===== Firebase: 구글 로그인 · 기기 간 동기화 · 접속자 수 ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getDatabase, ref, set, get, remove, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAyuSWXxP78K-EqqXZZA4BteYi7asJp5Cg",
+  authDomain: "samuel-e3e07.firebaseapp.com",
+  // ▼ Realtime Database를 만들면 콘솔에 표시되는 주소입니다. 지역이 아시아면 끝부분이 다를 수 있어요(아래 안내 참고).
+  databaseURL: "https://samuel-e3e07-default-rtdb.firebaseio.com",
+  projectId: "samuel-e3e07",
+  storageBucket: "samuel-e3e07.firebasestorage.app",
+  messagingSenderId: "642131849305",
+  appId: "1:642131849305:web:113675f0af00ad2a034148",
+  measurementId: "G-1856KNEGQE"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
+
+// 기기마다 달라야 하는(동기화 제외) 키
+const DEVICE_KEYS = new Set(['theme','autoFullscreen','fingerDraw','toolbarVertical','toolbarPos','sidebar_layout','studyZoom']);
+
+let currentUser = null;
+let prevStatusUid = null;
+let applyingRemote = false;
+let uploadTimer = null;
+
+// localStorage 쓰기를 가로채 변경 시 자동 업로드
+const _setItem = Storage.prototype.setItem;
+const _removeItem = Storage.prototype.removeItem;
+Storage.prototype.setItem = function(k, v){ _setItem.apply(this, arguments); scheduleUpload(k); };
+Storage.prototype.removeItem = function(k){ _removeItem.apply(this, arguments); scheduleUpload(k); };
+
+function scheduleUpload(key){
+  if (applyingRemote || !currentUser || currentUser.isAnonymous) return;
+  if (key && DEVICE_KEYS.has(key)) return;
+  clearTimeout(uploadTimer);
+  uploadTimer = setTimeout(uploadSnapshot, 1200);
+}
+
+function buildSnapshot(){
+  const obj = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (DEVICE_KEYS.has(k)) continue;
+    obj[k] = localStorage.getItem(k);
+  }
+  return obj;
+}
+
+async function uploadSnapshot(){
+  if (!currentUser || currentUser.isAnonymous) return;
+  try {
+    await set(ref(db, 'users/' + currentUser.uid), { store: buildSnapshot(), updatedAt: serverTimestamp() });
+  } catch(e){ console.warn('동기화 업로드 실패', e); }
+}
+
+function applyRemote(store){
+  applyingRemote = true;
+  try {
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (!DEVICE_KEYS.has(k)) toRemove.push(k); }
+    toRemove.forEach(k => _removeItem.call(localStorage, k));
+    Object.keys(store || {}).forEach(k => { if (!DEVICE_KEYS.has(k)) _setItem.call(localStorage, k, store[k]); });
+  } finally { applyingRemote = false; }
+  // 화면 새로고침 없이 진도 패널만 다시 그림
+  try { if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
+}
+
+// 접속자 수(프레즌스)
+function setupPresence(uid){
+  if (prevStatusUid && prevStatusUid !== uid){ try { remove(ref(db, 'status/' + prevStatusUid)); } catch(e){} }
+  prevStatusUid = uid;
+  const myStatus = ref(db, 'status/' + uid);
+  onValue(ref(db, '.info/connected'), (snap) => {
+    if (snap.val() === false) return;
+    onDisconnect(myStatus).remove().then(() => set(myStatus, { online: true, ts: serverTimestamp() }));
+  });
+}
+
+function subscribeCount(){
+  onValue(ref(db, 'status'), (snap) => {
+    const n = snap.exists() ? snap.size : 0;
+    const el = document.getElementById('onlineCount');
+    if (el) el.textContent = '👥 ' + n;
+  });
+}
+
+function updateAuthUI(user){
+  const btn = document.getElementById('authBtn');
+  if (!btn) return;
+  if (user && !user.isAnonymous){
+    btn.textContent = '🚪';
+    btn.title = (user.displayName || '로그인됨') + ' — 로그아웃';
+  } else {
+    btn.textContent = '👤';
+    btn.title = '구글 로그인';
+  }
+}
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (!user){
+    try { await signInAnonymously(auth); } catch(e){ console.warn('익명 로그인 실패', e); }
+    return;
+  }
+  setupPresence(user.uid);
+  updateAuthUI(user);
+  if (!user.isAnonymous){
+    try {
+      const snap = await get(ref(db, 'users/' + user.uid));
+      if (snap.exists() && snap.val().store){
+        applyRemote(snap.val().store);
+      } else {
+        await uploadSnapshot(); // 첫 로그인 시 이 기기 데이터를 클라우드에 올림
+      }
+    } catch(e){ console.warn('동기화 불러오기 실패', e); }
+  }
+});
+
+subscribeCount();
+
+window.samuelToggleAuth = async function(){
+  if (currentUser && !currentUser.isAnonymous){
+    if (confirm('로그아웃 할까요? (이 기기에 저장된 진도는 그대로 남습니다)')){
+      try { await signOut(auth); } catch(e){ alert('로그아웃 실패: ' + (e.message||e)); }
+    }
+  } else {
+    try { await signInWithPopup(auth, provider); }
+    catch(e){
+      if (e && e.code === 'auth/unauthorized-domain'){
+        alert('이 도메인이 Firebase에 등록되지 않았습니다.\nFirebase 콘솔 → Authentication → Settings → 승인된 도메인 에 tjswo757-cmd.github.io 를 추가하세요.');
+      } else if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request')){
+        alert('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.');
+      } else {
+        alert('로그인 실패: ' + (e.message||e));
+      }
+    }
+  }
+};
+</script>
+
 </body>
 </html>
