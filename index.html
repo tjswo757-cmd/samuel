@@ -195,7 +195,8 @@
     .theme-toggle-btn { font-size: 20px !important; }
 
     /* [신규] 가로 리스트형 메뉴 */
-    .main-menu-list { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+    .main-menu-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 24px; }
+    @media (max-width: 560px) { .main-menu-list { grid-template-columns: 1fr; } }
     .menu-row {
         display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer;
         background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 16px 18px;
@@ -1560,10 +1561,10 @@
             <div class="nav-btn-group">
                 <span class="nav-btn online-badge" id="onlineCount" title="지금 접속 중인 인원">👥 –</span>
                 <button class="nav-btn auth-btn" id="authBtn" onclick="samuelToggleAuth()" title="구글 로그인">로그인</button>
-                <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()" title="전체화면" aria-label="전체화면">⛶</button>
+                <button class="nav-btn fullscreen-btn hide-on-mobile" onclick="toggleFullscreen()" title="전체화면" aria-label="전체화면">⛶</button>
                 <button class="nav-btn theme-toggle-btn" onclick="toggleTheme()" title="다크모드 전환" aria-label="다크모드 전환">🌙</button>
                 <button class="nav-btn" onclick="goBack()">◀</button>
-                <button class="nav-btn" onclick="goForward()">▶</button>
+                <button class="nav-btn hide-on-mobile" onclick="goForward()">▶</button>
             </div>
         </header>
 
@@ -1598,7 +1599,7 @@
                         </button>
                         <button class="menu-row battle" onclick="samuelOpenGame()">
                             <span class="menu-row-ico">⚔️</span>
-                            <span class="menu-row-text"><span class="menu-row-title">암송 대결</span><span class="menu-row-desc">방을 만들어 최대 4명이 실시간으로 구절 맞히기</span></span>
+                            <span class="menu-row-text"><span class="menu-row-title">암송 대결</span><span class="menu-row-desc">방을 만들어 최대 6명이 실시간으로 구절 맞히기</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                     </div>
@@ -2807,7 +2808,8 @@ function searchVerses() {
                 const key = day + '|' + it.v;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                cards.push(`<div class="vs-card"><div class="vs-meta">${esc(day)} · ${esc(it.t)} · ${it.c}과정</div><div class="vs-text"><span class="vs-ref">${hl(it.v)}</span>${hl(it.txt)}</div></div>`);
+                const courseLabel = Array.from({ length: 4 - it.c + 1 }, (_, i) => it.c + i).join(',') + '과정';
+                cards.push(`<div class="vs-card"><div class="vs-meta">${esc(day)} · ${esc(it.t)} · ${courseLabel}</div><div class="vs-text"><span class="vs-ref">${hl(it.v)}</span>${hl(it.txt)}</div></div>`);
                 if (++count >= LIMIT) break outer;
             }
         }
@@ -3777,7 +3779,12 @@ let isResizing = false;
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
     sb.classList.toggle('active');
-    if (sb.classList.contains('active')) applySidebarLayout();
+    if (sb.classList.contains('active')) {
+        applySidebarLayout();
+        // 도우미를 열 때 현재 보고 있는 과정·일차로 즉시 동기화
+        const d = document.getElementById('daySelect').value;
+        if (bibleData[d]) syncSidebar(course, d);
+    }
 }
 
 // 리사이징 시작 (마우스 누름 / 터치 시작)
@@ -4624,8 +4631,8 @@ function startQuiz(m) {
     
     showStep('quizArea');
     renderQuiz();
-    
-    if (isTestMode) syncSidebar(course, d);
+
+    syncSidebar(course, d); // 도우미를 현재 과정·일차로 동기화
 }
 
 function renderQuiz() {
@@ -6474,12 +6481,49 @@ function initScriptSwipeAndZoom(isPC) {
   [data-theme="dark"] .g-result-row { border-bottom-color: #262e39; }
   .g-result-row.win { background: #fff8e1; border-radius: 12px; font-size: 1.1em; }
   [data-theme="dark"] .g-result-row.win { background: #33301c; }
+  /* 주관식 입력 */
+  .g-input { width: 100%; box-sizing: border-box; padding: 13px 14px; font-size: 1.05em; border: 2px solid #dde6f0; border-radius: 12px; resize: vertical; line-height: 1.6; font-family: inherit; }
+  .g-input:focus { outline: none; border-color: var(--primary); }
+  [data-theme="dark"] .g-input { background: #11161d; border-color: #2a323e; color: #eef2f7; }
+  .g-feedback { min-height: 20px; text-align: center; font-weight: 700; margin: 8px 0; }
+  .g-feedback.ok { color: #27ae60; }
+  .g-feedback.no { color: #e74c3c; }
+  .g-answer-box { background: #e9faf0; border: 1px solid #b9e6c9; border-radius: 12px; padding: 13px 15px; line-height: 1.6; margin: 6px 0; font-weight: 600; }
+  [data-theme="dark"] .g-answer-box { background: #14321f; border-color: #2a5638; color: #d6f5e2; }
+  /* 대결 출제범위 설정 */
+  .g-set { background: #f4f8fd; border-radius: 14px; padding: 14px; margin: 4px 0 14px; }
+  [data-theme="dark"] .g-set { background: #232b36; }
+  .g-set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .g-set-row span { font-weight: 700; }
+  .g-set-row select { padding: 8px 12px; border: 2px solid #dde6f0; border-radius: 10px; font-weight: 700; font-size: 1em; }
+  [data-theme="dark"] .g-set-row select { background: #11161d; border-color: #2a323e; color: #eef2f7; }
+  .g-set-label { font-weight: 700; margin-bottom: 8px; }
+  .g-set-hint { color: #8a96a3; font-weight: 500; font-size: 0.85em; }
+  .g-daygrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .g-day { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 9px 4px; border: 2px solid #e3e9f0; border-radius: 10px; background: #fff; font-weight: 700; cursor: pointer; font-size: 0.92em; }
+  .g-day.on { border-color: var(--primary); background: #eaf4ff; color: var(--primary); }
+  [data-theme="dark"] .g-day { background: #11161d; border-color: #333d4a; color: #cbd3dd; }
+  [data-theme="dark"] .g-day.on { background: #1e2c3d; color: #8cc6f0; border-color: #2b6aa0; }
+  .g-day input { accent-color: var(--primary); }
+
+  /* 모바일 헤더 겹침 방지 */
+  .fixed-header { grid-template-columns: 1fr minmax(0, auto) 1fr; }
+  @media (max-width: 768px){
+    .fixed-header { gap: 2px; padding: 0 6px; }
+    .fixed-header .title-small { display: none; }              /* 부제목 숨겨 공간 확보 */
+    .title-large { font-size: 1.02rem; }
+    .nav-btn-group { gap: 1px; }
+    .online-badge { font-size: 0.66em; padding: 0 3px; }
+    .auth-btn { font-size: 0.72rem !important; padding: 4px 8px !important; max-width: 78px; }
+    .nav-btn-group .nav-btn { font-size: 17px; padding: 3px; }
+    .hide-on-mobile { display: none !important; }              /* 앞/뒤 화살표 등 모바일 숨김 */
+  }
 </style>
 
 <!-- ===== Firebase: 구글 로그인 · 기기 간 동기화 · 접속자 수 ===== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { getDatabase, ref, set, update, get, remove, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
@@ -6816,10 +6860,11 @@ window.samuelOpenLeaderboard = async function(){
 };
 
 // ===================== 실시간 암송 대결 =====================
-const Q_TIME = 12000;     // 문제당 제한시간(ms)
-const REVEAL = 2800;      // 정답 공개 시간(ms)
-const Q_COUNT = 7;        // 문제 수
-const MAX_PLAYERS = 4;
+const Q_TIME = 120000;    // 문제당 제한시간(ms) = 2분
+const REVEAL = 4500;      // 정답 공개 시간(ms)
+const Q_COUNT = 5;        // 기본 문제 수(방장이 변경 가능)
+const Q_COUNT_OPTS = [3, 5, 7, 10, 15];
+const MAX_PLAYERS = 6;
 
 let gameCode = null;
 let gameUnsub = null;
@@ -6829,13 +6874,19 @@ let scheduledQ = -1;
 let earlyQ = -1;
 let tickTimer = null;
 let myAnsweredQ = -1;
+let renderedQ = -1;
+let renderedPhase = '';
+
+// 띄어쓰기·문장부호 차이는 무시하고 비교
+function normAns(s){ return (s || '').replace(/[\s.,·…"'""''’‘`~!?;:()]/g, ''); }
 
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function genCode(){ return String(Math.floor(1000 + Math.random() * 9000)); }
-function buildPool(course){
+function buildPool(course, days){
   const bd = window.bibleData || {};
   const seen = new Set(), out = [];
-  Object.keys(bd).forEach(day => (bd[day] || []).forEach(it => {
+  const dayList = (days && days.length) ? days : Object.keys(bd); // 안 고르면 전체
+  dayList.forEach(day => (bd[day] || []).forEach(it => {
     if (it.c <= course && it.txt && !seen.has(it.v)){ seen.add(it.v); out.push({ v: it.v, t: it.t, txt: it.txt }); }
   }));
   return out;
@@ -6897,7 +6948,7 @@ async function createRoom(){
       code = genCode();
     }
     await set(ref(db, 'rooms/' + code), {
-      host: currentUser.uid, hostNick: myNickname, state: 'waiting', course: course,
+      host: currentUser.uid, hostNick: myNickname, state: 'waiting', course: course, qCount: Q_COUNT,
       qIndex: -1, createdAt: serverTimestamp(),
       players: { [currentUser.uid]: { nick: myNickname, score: 0, joinedAt: serverTimestamp() } }
     });
@@ -6941,7 +6992,7 @@ function enterRoom(code){
 function cleanupRoomState(){
   if (gameUnsub){ gameUnsub(); gameUnsub = null; }
   clearTimeout(hostTimer); clearInterval(tickTimer);
-  gameCode = null; gameRoom = null; scheduledQ = -1; myAnsweredQ = -1;
+  gameCode = null; gameRoom = null; scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1; renderedQ = -1; renderedPhase = '';
 }
 
 function leaveRoom(){
@@ -6972,74 +7023,137 @@ function renderRoom(){
   document.getElementById('gmTitle').textContent = '대기 중';
   const ps = playersArr(room);
   const host = isHost(room);
+  const course = room.course || 4;
+  const sel = room.days || [];
+  const qCount = room.qCount || Q_COUNT;
+  const dayKeys = Object.keys(window.bibleData || {});
   const plist = ps.map(p =>
     '<div class="g-player' + (p.uid === room.host ? ' host' : '') + '">' + escapeHtml(p.nick) + '</div>'
   ).join('') + Array.from({ length: MAX_PLAYERS - ps.length }, () => '<div class="g-player" style="opacity:.4;">빈 자리</div>').join('');
+
+  // 출제 범위 설정(방장) / 표시(참가자)
+  let setHtml;
+  if (host){
+    setHtml = '<div class="g-set">' +
+      '<div class="g-set-row"><span>과정</span>' +
+        '<select id="gmCourse">' + [1,2,3,4].map(c => '<option value="' + c + '"' + (c === course ? ' selected' : '') + '>' + c + '과정</option>').join('') + '</select>' +
+      '</div>' +
+      '<div class="g-set-row"><span>문제 수</span>' +
+        '<select id="gmQCount">' + Q_COUNT_OPTS.map(n => '<option value="' + n + '"' + (n === qCount ? ' selected' : '') + '>' + n + '문제</option>').join('') + '</select>' +
+      '</div>' +
+      '<div class="g-set-label">일차 <span class="g-set-hint">(복수 선택 가능 · 안 고르면 전체 랜덤)</span></div>' +
+      '<div class="g-daygrid">' + dayKeys.map(d => '<label class="g-day' + (sel.includes(d) ? ' on' : '') + '"><input type="checkbox" data-day="' + d + '"' + (sel.includes(d) ? ' checked' : '') + '>' + d + '</label>').join('') + '</div>' +
+      '</div>';
+  } else {
+    const range = sel.length ? sel.join(', ') : '전체 일차 (랜덤)';
+    setHtml = '<div class="g-set"><div class="g-set-label">출제 범위: <b>' + course + '과정 · ' + range + '</b><br>문제 수: <b>' + qCount + '문제</b></div></div>';
+  }
+
   gmBody().innerHTML =
     '<div class="g-code-big">' + gameCode + '</div>' +
     '<div class="g-code-label">이 코드를 친구에게 알려주세요</div>' +
     '<div class="g-players">' + plist + '</div>' +
+    setHtml +
     (host
       ? '<button class="g-btn purple" id="gmStart"' + (ps.length < 2 ? ' disabled' : '') + '>게임 시작 (' + ps.length + '명)</button>' +
         (ps.length < 2 ? '<div class="g-msg">2명 이상 모이면 시작할 수 있어요.</div>' : '')
       : '<div class="g-msg">방장이 시작하기를 기다리는 중...</div>') +
     '<button class="g-btn ghost" id="gmLeave">나가기</button>';
-  if (host){ const s = document.getElementById('gmStart'); if (s) s.onclick = startGame; }
+
+  if (host){
+    const s = document.getElementById('gmStart'); if (s) s.onclick = startGame;
+    const cs = document.getElementById('gmCourse');
+    if (cs) cs.onchange = () => { try { update(ref(db, 'rooms/' + gameCode), { course: Number(cs.value) }); } catch(e){} };
+    const qc = document.getElementById('gmQCount');
+    if (qc) qc.onchange = () => { try { update(ref(db, 'rooms/' + gameCode), { qCount: Number(qc.value) }); } catch(e){} };
+    gmBody().querySelectorAll('.g-daygrid input').forEach(chk => chk.onchange = () => {
+      const cur = (gameRoom.days || []).slice();
+      const day = chk.dataset.day, i = cur.indexOf(day);
+      if (chk.checked && i < 0) cur.push(day);
+      if (!chk.checked && i >= 0) cur.splice(i, 1);
+      try { update(ref(db, 'rooms/' + gameCode), { days: cur.length ? cur : null }); } catch(e){}
+    });
+  }
   document.getElementById('gmLeave').onclick = closeGame;
 }
 
 async function startGame(){
   if (!isHost(gameRoom)) return;
-  await genQuestion(gameCode, gameRoom.course, 0, true);
+  const pool = buildPool(gameRoom.course || 4, gameRoom.days);
+  if (pool.length < 1){ alert('선택한 범위에 외울 구절이 없어요. 과정·일차를 다시 골라주세요.'); return; }
+  await genQuestion(gameCode, gameRoom.course || 4, 0, true);
 }
 
 async function genQuestion(code, course, idx, first){
-  const pool = buildPool(course);
-  if (pool.length < 4) return;
-  const ai = Math.floor(Math.random() * pool.length);
-  const ans = pool[ai];
-  const others = shuffle(pool.filter((_, i) => i !== ai)).slice(0, 3);
-  const opts = shuffle([ans, ...others]);
-  const correct = opts.indexOf(ans);
+  const pool = buildPool(course, gameRoom && gameRoom.days);
+  if (!pool.length) return;
+  const ans = pool[Math.floor(Math.random() * pool.length)];
   const payload = {
     qIndex: idx,
-    question: { topic: ans.t, ref: ans.v, choices: opts.map(o => o.txt), correct, startedAt: Date.now() }
+    question: { topic: ans.t, ref: ans.v, answer: ans.txt, startedAt: Date.now() }
   };
   if (first) payload.state = 'playing';
   await update(ref(db, 'rooms/' + code), payload);
 }
 
+function scoreStripHtml(room){
+  const ans = (room.answers && room.answers[room.qIndex]) || {};
+  return playersArr(room).sort((a, b) => (b.score||0) - (a.score||0)).map(p => {
+    const done = ans[p.uid] && ans[p.uid].correct ? ' ✅' : '';
+    return '<div class="g-player"' + (p.uid === currentUser.uid ? ' style="outline:2px solid var(--primary);"' : '') + '>' +
+      escapeHtml(p.nick) + done + '<span class="g-p-score">' + (p.score||0) + '점</span></div>';
+  }).join('');
+}
+function updateScoreStrip(room){
+  const el = document.getElementById('gmScores');
+  if (el) el.innerHTML = scoreStripHtml(room);
+}
+
 function renderPlaying(){
   const room = gameRoom, q = room.question;
   if (!q) return;
-  document.getElementById('gmTitle').textContent = '문제 ' + (room.qIndex + 1) + ' / ' + Q_COUNT;
   const elapsed = Date.now() - q.startedAt;
   const revealing = elapsed >= Q_TIME || allAnswered(room);
-  const picked = (room.answers && room.answers[room.qIndex] && room.answers[room.qIndex][currentUser.uid]);
-  const ps = playersArr(room).sort((a, b) => (b.score||0) - (a.score||0));
-  const scoreStrip = ps.map(p => '<div class="g-player"' + (p.uid === currentUser.uid ? ' style="outline:2px solid var(--primary);"' : '') + '>' + escapeHtml(p.nick) + '<span class="g-p-score">' + (p.score||0) + '점</span></div>').join('');
+  const mine = room.answers && room.answers[room.qIndex] && room.answers[room.qIndex][currentUser.uid];
+  const solved = !!(mine && mine.correct);
+  const phase = revealing ? 'reveal' : (solved ? 'solved' : 'input');
 
-  let html = '<div class="g-qhead"><div class="g-topic">' + escapeHtml(q.topic) + '</div><div class="g-ref">' + escapeHtml(q.ref) + '</div><div class="g-qno" style="margin-top:4px;">이 구절의 본문은?</div></div>' +
+  // 같은 문제·같은 단계면 입력칸을 다시 그리지 않고 점수만 갱신(타이핑 중 깨짐 방지)
+  if (renderedQ === room.qIndex && renderedPhase === phase){ updateScoreStrip(room); return; }
+  renderedQ = room.qIndex; renderedPhase = phase;
+
+  document.getElementById('gmTitle').textContent = '문제 ' + (room.qIndex + 1) + ' / ' + (room.qCount || Q_COUNT);
+  let html = '<div class="g-qhead"><div class="g-topic">' + escapeHtml(q.topic) + '</div><div class="g-ref">' + escapeHtml(q.ref) + '</div>' +
+    '<div class="g-qno" style="margin-top:4px;">이 장절의 본문을 외워서 적어보세요</div></div>' +
     '<div class="g-timebar"><i id="gmBar" style="width:100%"></i></div>';
-  html += q.choices.map((c, i) => {
-    let cls = 'g-choice';
-    if (revealing){ if (i === q.correct) cls += ' correct'; else if (picked && picked.choice === i) cls += ' wrong'; }
-    else if (picked && picked.choice === i) cls += ' picked';
-    return '<button class="' + cls + '" data-i="' + i + '"' + ((revealing || picked) ? ' disabled' : '') + '>' + escapeHtml(c) + '</button>';
-  }).join('');
-  html += '<div class="g-players" style="margin-top:14px;">' + scoreStrip + '</div>';
+  if (revealing){
+    html += '<div class="g-answer-box">' + escapeHtml(q.answer) + '</div>';
+    html += solved ? '<div class="g-feedback ok">정답! +' + (mine.pts||0) + '점 🎉</div>' : '<div class="g-feedback no">아쉬워요 😢 (정답은 위에)</div>';
+  } else if (solved){
+    html += '<div class="g-feedback ok">정답! 다른 사람을 기다리는 중... 🎉 (+' + (mine.pts||0) + '점)</div>';
+  } else {
+    html += '<textarea id="gmInput" class="g-input" rows="4" placeholder="본문을 외워서 입력하세요&#10;(띄어쓰기·문장부호는 달라도 괜찮아요)"></textarea>' +
+      '<div class="g-feedback" id="gmFb"></div>' +
+      '<button class="g-btn primary" id="gmSubmit">제출</button>';
+  }
+  html += '<div class="g-players" id="gmScores" style="margin-top:14px;">' + scoreStripHtml(room) + '</div>';
   gmBody().innerHTML = html;
 
-  if (!revealing && !picked){
-    gmBody().querySelectorAll('.g-choice').forEach(b => b.onclick = () => submitAnswer(parseInt(b.dataset.i)));
+  if (phase === 'input'){
+    const sub = document.getElementById('gmSubmit');
+    if (sub) sub.onclick = trySubmit;
+    const inp = document.getElementById('gmInput');
+    if (inp){ try { inp.focus(); } catch(e){} }
   }
   startTick();
 }
 
 function allAnswered(room){
   const ans = room.answers && room.answers[room.qIndex];
+  if (!ans) return false;
   const np = Object.keys(room.players || {}).length;
-  return ans && Object.keys(ans).length >= np;
+  let c = 0; Object.keys(ans).forEach(u => { if (ans[u] && ans[u].correct) c++; });
+  return c >= np;
 }
 
 function startTick(){
@@ -7051,22 +7165,28 @@ function startTick(){
     const bar = document.getElementById('gmBar');
     if (bar) bar.style.width = (ratio * 100) + '%';
     if (elapsed >= Q_TIME){ renderPlaying(); clearInterval(tickTimer); } // 시간 종료 → 정답 공개
-  }, 200);
+  }, 250);
 }
 
-async function submitAnswer(choice){
+async function trySubmit(){
   const room = gameRoom; if (!room || !room.question) return;
   if (myAnsweredQ === room.qIndex) return;
+  const inp = document.getElementById('gmInput');
+  const val = inp ? inp.value : '';
+  if (!normAns(val)) return;
+  const fb = document.getElementById('gmFb');
+  if (normAns(val) !== normAns(room.question.answer)){
+    if (fb){ fb.className = 'g-feedback no'; fb.textContent = '틀렸어요. 다시 도전! (띄어쓰기는 무시돼요)'; }
+    return;
+  }
+  // 정답
   myAnsweredQ = room.qIndex;
   const elapsed = Date.now() - room.question.startedAt;
-  const correct = choice === room.question.correct;
-  const points = correct ? Math.max(200, 1000 - Math.floor(elapsed / 15)) : 0;
+  const pts = Math.max(200, 1000 - Math.floor(elapsed / 200)); // 빠를수록 높은 점수
   try {
-    await set(ref(db, 'rooms/' + gameCode + '/answers/' + room.qIndex + '/' + currentUser.uid), { choice, correct, ms: elapsed });
-    if (points){
-      const cur = (room.players[currentUser.uid] && room.players[currentUser.uid].score) || 0;
-      await set(ref(db, 'rooms/' + gameCode + '/players/' + currentUser.uid + '/score'), cur + points);
-    }
+    await set(ref(db, 'rooms/' + gameCode + '/answers/' + room.qIndex + '/' + currentUser.uid), { correct: true, ms: elapsed, pts });
+    const cur = (room.players[currentUser.uid] && room.players[currentUser.uid].score) || 0;
+    await set(ref(db, 'rooms/' + gameCode + '/players/' + currentUser.uid + '/score'), cur + pts);
   } catch(e){ console.warn('답안 제출 실패', e); }
   renderPlaying();
 }
@@ -7074,7 +7194,7 @@ async function submitAnswer(choice){
 // 호스트만: 문제 진행 타이머
 function hostAdvance(room){
   const next = room.qIndex + 1;
-  if (next >= Q_COUNT) update(ref(db, 'rooms/' + gameCode), { state: 'finished' });
+  if (next >= (room.qCount || Q_COUNT)) update(ref(db, 'rooms/' + gameCode), { state: 'finished' });
   else genQuestion(gameCode, room.course, next);
 }
 function hostSchedule(){
@@ -7117,26 +7237,68 @@ async function restartGame(){
   const ps = gameRoom.players || {};
   const resetPlayers = {};
   Object.keys(ps).forEach(uid => resetPlayers[uid] = { ...ps[uid], score: 0 });
-  scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1;
+  scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1; renderedQ = -1; renderedPhase = '';
   await update(ref(db, 'rooms/' + gameCode), { players: resetPlayers, answers: null, state: 'waiting', qIndex: -1, question: null });
 }
+
+// 카카오톡·인스타 등 앱 내장 브라우저(웹뷰) 감지 — 구글 로그인 차단됨
+function isInAppBrowser(){
+  const ua = navigator.userAgent || '';
+  return /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER\(inapp|DaumApps|everytimeApp|Snapchat|TwitterAndroid|; wv\)/i.test(ua);
+}
+function isMobile(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ''); }
+
+async function copyLink(){
+  try { await navigator.clipboard.writeText('https://tjswo757-cmd.github.io/samuel/'); return true; } catch(e){ return false; }
+}
+
+// 리다이렉트 로그인 결과 처리(모바일)
+getRedirectResult(auth).catch((e) => {
+  if (e && e.code === 'auth/unauthorized-domain'){
+    alert('이 도메인이 Firebase에 등록되지 않았습니다.\n승인된 도메인에 tjswo757-cmd.github.io 를 추가하세요.');
+  }
+});
 
 window.samuelToggleAuth = async function(){
   if (currentUser && !currentUser.isAnonymous){
     openAccountModal();
-  } else {
-    try { await signInWithPopup(auth, provider); }
-    catch(e){
-      if (e && e.code === 'auth/unauthorized-domain'){
-        alert('이 도메인이 Firebase에 등록되지 않았습니다.\nFirebase 콘솔 → Authentication → Settings → 승인된 도메인 에 tjswo757-cmd.github.io 를 추가하세요.');
-      } else if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request')){
-        alert('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.');
-      } else {
-        alert('로그인 실패: ' + (e.message||e));
-      }
+    return;
+  }
+  // 인앱 브라우저면 안내 후 중단
+  if (isInAppBrowser()){
+    const copied = await copyLink();
+    alert('카카오톡·인스타그램 등 "앱 안의 브라우저"에서는 구글 로그인이 막혀 있어요.\n\n' +
+      '오른쪽 위/아래 메뉴(⋯ 또는 ≡)에서 "다른 브라우저로 열기"(Chrome·Safari)를 눌러주세요.' +
+      (copied ? '\n\n(주소를 복사해 뒀어요 — 크롬/사파리 주소창에 붙여넣어 열어도 됩니다.)' : ''));
+    return;
+  }
+  const wasFs = !!(window.isFullscreen && window.isFullscreen()); // 로그인 전 전체화면 여부
+  try {
+    await signInWithPopup(auth, provider);
+    if (wasFs) restoreFullscreen(); // 팝업으로 깨진 전체화면 복원
+  }
+  catch(e){
+    if (e && e.code === 'auth/unauthorized-domain'){
+      alert('이 도메인이 Firebase에 등록되지 않았습니다.\nFirebase 콘솔 → Authentication → Settings → 승인된 도메인 에 tjswo757-cmd.github.io 를 추가하세요.');
+    } else if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request')){
+      alert('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.');
+    } else {
+      alert('로그인 실패: ' + (e.message||e));
     }
   }
 };
+
+// 로그인 팝업 등으로 전체화면이 풀렸을 때 복원(즉시 시도 + 안 되면 다음 탭에서)
+function restoreFullscreen(){
+  try { window.enterAppFullscreen && window.enterAppFullscreen(); } catch(e){}
+  const re = () => {
+    document.removeEventListener('pointerdown', re);
+    document.removeEventListener('click', re);
+    try { window.enterAppFullscreen && window.enterAppFullscreen(); } catch(e){}
+  };
+  document.addEventListener('pointerdown', re, { once: true });
+  document.addEventListener('click', re, { once: true });
+}
 </script>
 
 </body>
