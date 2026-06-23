@@ -1,0 +1,17 @@
+{
+  "name": "사무엘학교 암송 연습",
+  "short_name": "사무엘학교",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1088x976",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
