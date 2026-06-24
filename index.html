@@ -6737,7 +6737,22 @@ function initScriptSwipeAndZoom(isPC) {
   [data-theme="dark"] #gmOverlay.full { background: #14181f; }
   #gmOverlay.full .sm-panel.big { max-width: none; width: 100%; min-height: 100vh; min-height: 100dvh; max-height: none; border-radius: 0; box-shadow: none; }
   #gmOverlay.full .sm-panel.big .sm-head { border-radius: 0; }
-  #gmOverlay.full .sm-panel.big .sm-body { max-width: 760px; width: 100%; margin: 0 auto; }
+  /* 내용을 화면 세로 가운데로 + 전체적으로 크게 */
+  #gmOverlay.full .sm-panel.big .sm-body { max-width: 880px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; justify-content: safe center; padding: 28px 24px; }
+  #gmOverlay.full .sm-panel.big .sm-head h2 { font-size: 1.5em; }
+  #gmOverlay.full .sm-panel.big .g-qhead { margin-bottom: 16px; }
+  #gmOverlay.full .sm-panel.big .g-topic { font-size: 1.8em; }
+  #gmOverlay.full .sm-panel.big .g-ref { font-size: 2.8em; margin-top: 6px; }
+  #gmOverlay.full .sm-panel.big .g-qno { font-size: 1.2em; }
+  #gmOverlay.full .sm-panel.big .g-timebar { height: 15px; margin: 20px 0; }
+  #gmOverlay.full .sm-panel.big .g-input { font-size: 1.4em; min-height: 220px; padding: 22px; }
+  #gmOverlay.full .sm-panel.big .g-feedback { font-size: 1.25em; min-height: 28px; }
+  #gmOverlay.full .sm-panel.big .g-answer-box { font-size: 1.35em; padding: 22px 24px; }
+  #gmOverlay.full .sm-panel.big .g-btn { font-size: 1.4em; padding: 24px; border-radius: 16px; }
+  #gmOverlay.full .sm-panel.big .g-players { gap: 14px; margin-top: 24px; }
+  #gmOverlay.full .sm-panel.big .g-player { font-size: 1.3em; padding: 20px 14px; }
+  #gmOverlay.full .sm-panel.big .g-player .g-p-score { font-size: 0.72em; margin-top: 6px; }
+  #gmOverlay.full .sm-panel.big .g-result-row { font-size: 1.25em; padding: 16px 14px; }
   #gmOverlay .sm-panel.big .sm-body { flex: 1; }
   #gmOverlay .sm-panel.big .g-topic { font-size: 1.3em; }
   #gmOverlay .sm-panel.big .g-ref { font-size: 1.6em; }
