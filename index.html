@@ -465,8 +465,8 @@
     #studyScrollWrapper.flow { position: relative; flex: none; overflow: visible; height: auto; }
 
     /* [신규] 암송 외우기 몰입 모드 — 상단(사무엘학교)·하단(말씀) 바 숨겨 한 화면에 맞춤, 스크롤/스와이프로 잠깐 표시 */
-    /* 손가락 핀치(두 손가락 확대)는 JS로 처리하므로 브라우저 기본 핀치줌은 막고, 한 손가락 세로 스크롤만 허용 */
-    body.study-immersive #scrollContent { touch-action: pan-y; }
+    /* 손가락 제스처(핀치 확대·스크롤)를 JS로 직접 처리 → 브라우저가 가로채 취소하지 못하게 touch-action 끔 */
+    body.study-immersive #scrollContent { touch-action: none; }
     body.study-immersive #globalHeader { position: fixed; top: 0; left: 0; right: 0; transform: translateY(-100%); transition: transform .28s ease; z-index: 3000; will-change: transform; }
     body.study-immersive .app-footer { position: fixed; bottom: 0; left: 0; right: 0; transform: translateY(100%); transition: transform .28s ease; z-index: 3000; }
     body.study-immersive.chrome-reveal #globalHeader { transform: translateY(0); }
@@ -480,9 +480,10 @@
        하단 여백 최소화해 '종이(본문) 끝'까지만 내려가게(그 아래 그라데이션 빈영역으로 안 내려감) */
     body.study-zoomscroll #scrollContent { overflow-y: auto; justify-content: flex-start; padding-bottom: 6px; }
     body.study-zoomscroll #studyArea.study-flow { padding-bottom: 0; }
-    /* 화면 확대/축소 컨트롤 — 오른쪽 상단(항상 보이게 z3500, 헤더 나타나면 헤더 아래로 슬라이드) */
-    #studyZoomCtl { position: fixed; top: 12px; right: 16px; z-index: 3500; display: none; align-items: center; gap: 4px; background: rgba(255,255,255,0.96); border: 1px solid #e6e9ee; border-radius: 22px; padding: 4px 7px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); transition: top .28s ease; }
-    body.study-immersive #studyZoomCtl { display: flex; }
+    /* 화면 확대/축소 컨트롤 — 우상단. 확대/축소(핀치·버튼·휠)할 때만 잠깐 나타났다 자동으로 사라짐 */
+    #studyZoomCtl { position: fixed; top: 12px; right: 16px; z-index: 3500; display: none; align-items: center; gap: 4px; background: rgba(255,255,255,0.96); border: 1px solid #e6e9ee; border-radius: 22px; padding: 4px 7px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); transition: top .28s ease, opacity .25s ease; }
+    body.study-immersive #studyZoomCtl { display: flex; opacity: 0; pointer-events: none; }       /* 평소엔 숨김 */
+    body.study-immersive #studyZoomCtl.visible { opacity: 1; pointer-events: auto; }               /* 확대 동작 중에만 표시 */
     body.study-immersive.chrome-reveal #studyZoomCtl { top: 82px; }   /* 헤더 나타나면 그 아래로 → 안 가림 */
     .szc-btn, .szc-lock { width: 30px; height: 30px; border: none; background: #f3f5f8; border-radius: 50%; cursor: pointer; font-size: 17px; font-weight: 700; color: #444; display: flex; align-items: center; justify-content: center; line-height: 1; }
     .szc-btn:hover, .szc-lock:hover { background: #e7ebf0; }
@@ -594,7 +595,7 @@
 
     #drawingCanvas { position: absolute; top: 0; left: 0; z-index: 50; pointer-events: none; touch-action: none; display: block; }
     /* 필기 모드 캔버스: touch-action:none 으로 브라우저가 펜 동작을 스크롤로 가로채(획 끊김) 못하게 함.
-       손가락 스크롤은 JS(fingerPan)로 직접 처리한다. */
+       손가락 스크롤·핀치 확대는 제스처 모듈(studyGesture*)에서 직접 처리한다. */
     #drawingCanvas.draw-active { pointer-events: auto; cursor: crosshair; touch-action: none; }
 
     /* [왼쪽 하단] 필기 모드 버튼 */
@@ -5111,7 +5112,6 @@ let strokeBefore = null;   // 제스처 시작 시점 스냅샷
 let drawKeyName = null;
 let drawDpr = 1;
 let drawResizeBound = false;
-let fingerPan = null;      // 손가락(터치)로 페이지 스크롤할 때 상태(touch-action:none 보완)
 
 const round1 = v => Math.round(v * 10) / 10;
 const isDrawTool = t => (t === 'pen' || t === 'highlighter' || t === 'eraser');
@@ -5322,16 +5322,8 @@ function onDrawDown(e) {
     if (!isPenModeActive || !isDrawTool(currentTool)) return;
     if (!drawCanvas.classList.contains('draw-active')) return;
     if (gPinch) return; // 두 손가락 핀치 중엔 그리지 않음
-    // [신규] 펜(스타일러스)·마우스로만 필기 — 손가락 터치는 그리지 않고 직접 스크롤
-    if (!isDrawablePointer(e)) {
-        if (e.pointerType === 'touch') {
-            // touch-action:none 때문에 기본 스크롤이 막히므로 손가락 드래그를 직접 스크롤로 처리
-            const sc = document.getElementById('scrollContent');
-            fingerPan = { id: e.pointerId, startY: e.clientY, startTop: sc ? sc.scrollTop : 0, sc };
-            try { drawCanvas.setPointerCapture(e.pointerId); } catch (_) {}
-        }
-        return;
-    }
+    // [신규] 펜(스타일러스)·마우스로만 필기 — 손가락 터치는 그리지 않음(스크롤/핀치는 제스처 모듈이 처리)
+    if (!isDrawablePointer(e)) return;
     e.preventDefault();
     try { drawCanvas.setPointerCapture(e.pointerId); } catch (_) {}
     const [x, y] = getDrawPos(e);
@@ -5353,12 +5345,7 @@ function onDrawDown(e) {
 }
 
 function onDrawMove(e) {
-    if (gPinch) return; // 핀치 중엔 그리기/스크롤 무시
-    // 손가락 스크롤 처리(그리기 아님)
-    if (fingerPan && e.pointerId === fingerPan.id) {
-        if (fingerPan.sc) fingerPan.sc.scrollTop = fingerPan.startTop - (e.clientY - fingerPan.startY);
-        return;
-    }
+    if (gPinch) return; // 핀치 중엔 그리기 무시
     if (!isDrawing) return;
     e.preventDefault();
     // 펜 입력의 중간 좌표(coalesced)를 모두 사용해 부드럽게 이어 그림
@@ -5409,7 +5396,6 @@ function densifyStraight(s) {
 }
 
 function onDrawUp(e) {
-    if (fingerPan && (!e || e.pointerId === fingerPan.id)) { fingerPan = null; if (!isDrawing) return; }
     if (!isDrawing) return;
     isDrawing = false;
     if (currentTool === 'eraser' && eraserPath) { tryEraseTextAnnotations(eraserPath); eraserPath = null; }
@@ -5644,7 +5630,8 @@ function applyStudyScale() {
 }
 function zoomStudy(delta) {
     if (!document.body.classList.contains('study-immersive')) return;
-    if (studyZoomLocked) return;   // 잠금 상태에서는 확대/축소 불가(메뉴바는 그대로 보임)
+    if (typeof showZoomCtl === 'function') showZoomCtl(); // 컨트롤 잠깐 표시
+    if (studyZoomLocked) return;   // 잠금 상태에서는 확대/축소 불가
     studyUserZoom = Math.min(3, Math.max(1, studyUserZoom + delta));  // 1.0(=화면 맞춤/100%) 미만 축소 불가
     saveStudyZoom(); applyStudyScale();
     if (typeof resizeDrawCanvas === 'function' && drawCanvas) resizeDrawCanvas();
@@ -5667,38 +5654,57 @@ function applyZoomFast() {
     updateZoomBadge(studyUserZoom);
 }
 
-/* ── 손가락 핀치(두 손가락)로 암송 외우기 확대/축소 ── */
-const gPts = new Map();   // 활성 터치 포인터 위치
-let gPinch = null;        // {d0:시작 거리, z0:시작 배율}
+/* ── 확대/축소 컨트롤(자물쇠 등)을 확대 동작 중에만 잠깐 표시 ── */
+let zoomCtlTimer = null;
+function showZoomCtl() {
+    const ctl = document.getElementById('studyZoomCtl');
+    if (!ctl) return;
+    ctl.classList.add('visible');
+    clearTimeout(zoomCtlTimer);
+    zoomCtlTimer = setTimeout(() => { const c = document.getElementById('studyZoomCtl'); if (c) c.classList.remove('visible'); }, 2800);
+}
+
+/* ── 암송 외우기 손가락 제스처: 두 손가락=핀치 확대/축소, 한 손가락=스크롤 (브라우저 가로채기 없이 직접 처리) ── */
+const gPts = new Map();    // 활성 터치 포인터 위치
+let gPinch = null;         // {d0:시작 손가락 간격, z0:시작 배율}
+let gScroll = null;        // {id, y0, top0, sc} 한 손가락 스크롤
 function studyGestureDown(e) {
     if (e.pointerType !== 'touch' || !document.body.classList.contains('study-immersive')) return;
+    if (isDrawing) return; // 펜 필기 중 손가락(손바닥 등)은 무시(팜 리젝션)
     gPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (gPts.size === 2) {
+    if (gPts.size >= 2) {
         const p = [...gPts.values()];
         gPinch = { d0: Math.max(1, Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y)), z0: studyUserZoom };
-        // 핀치 시작 → 그리던 획/손가락 스크롤 취소(글씨 안 그려지게)
-        isDrawing = false; curStroke = null; fingerPan = null;
+        gScroll = null;
+    } else {
+        const sc = document.getElementById('scrollContent');
+        gScroll = { id: e.pointerId, y0: e.clientY, top0: sc ? sc.scrollTop : 0, sc };
     }
 }
 function studyGestureMove(e) {
-    if (!gPts.has(e.pointerId)) return;
+    if (isDrawing || !gPts.has(e.pointerId)) return;
     const rec = gPts.get(e.pointerId); rec.x = e.clientX; rec.y = e.clientY;
     if (gPinch && gPts.size >= 2) {
         const p = [...gPts.values()];
         const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+        showZoomCtl(); // 잠금이어도 컨트롤은 보여 잠금해제 가능
         if (!studyZoomLocked) {
             studyUserZoom = Math.min(3, Math.max(1, gPinch.z0 * (d / gPinch.d0)));
             applyZoomFast();
         }
+        if (e.cancelable) e.preventDefault();
+    } else if (gScroll && e.pointerId === gScroll.id && gScroll.sc) {
+        gScroll.sc.scrollTop = gScroll.top0 - (e.clientY - gScroll.y0);
         if (e.cancelable) e.preventDefault();
     }
 }
 function studyGestureUp(e) {
     if (!gPts.has(e.pointerId)) return;
     gPts.delete(e.pointerId);
+    if (gScroll && e.pointerId === gScroll.id) gScroll = null;
     if (gPts.size < 2 && gPinch) { gPinch = null; saveStudyZoom(); applyStudyScale(); if (typeof resizeDrawCanvas === 'function' && drawCanvas) resizeDrawCanvas(); }
 }
-// 캡처 단계로 등록 → 캔버스(필기) 위에서도 핀치 인식
+// 캡처 단계로 등록 → 캔버스(필기) 위에서도 손가락 제스처 인식
 document.addEventListener('pointerdown', studyGestureDown, true);
 document.addEventListener('pointermove', studyGestureMove, true);
 document.addEventListener('pointerup', studyGestureUp, true);
