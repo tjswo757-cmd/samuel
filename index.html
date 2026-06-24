@@ -2713,6 +2713,18 @@ function recordProgress() {
     saveProgress(p);
 }
 
+// 홈에 들어올 때 '나의 진도' 과정 선택을 본인 프로필 과정으로 맞춤(다른 과정 봤더라도 리셋)
+function resetHomeProgressToMyCourse() {
+    const pc = document.getElementById('progressCourse');
+    if (pc) {
+        let c = parseInt(window.myCourse, 10);
+        if (![1, 2, 3, 4].includes(c)) c = parseInt(localStorage.getItem('lastCourse'), 10);
+        if (![1, 2, 3, 4].includes(c)) c = 1;
+        pc.value = String(c);
+    }
+    renderHomeProgress();
+}
+
 function renderHomeProgress() {
     const body = document.getElementById('hpBody');
     if (!body) return;
@@ -2774,8 +2786,9 @@ function getExamData() {
     const src = (d.scores && typeof d.scores === 'object') ? d.scores : {};
     const scores = {};
     EXAM_ITEMS.forEach(it => { const v = src[it.k]; scores[it.k] = (v === 0 || (typeof v === 'number' && !isNaN(v))) ? v : ''; });
-    let course = parseInt(d.course, 10);
-    if (![1, 2, 3, 4].includes(course)) course = parseInt(window.myCourse, 10); // 로그인 시 선택한 본인 과정 기본값
+    // 로그인 시 선택한 본인 과정을 최우선 기본값으로(저장된 옛 과정값보다 우선)
+    let course = parseInt(window.myCourse, 10);
+    if (![1, 2, 3, 4].includes(course)) course = parseInt(d.course, 10);
     if (![1, 2, 3, 4].includes(course)) course = parseInt(localStorage.getItem('lastCourse'), 10);
     if (![1, 2, 3, 4].includes(course)) course = 1;
     return { course, scores };
@@ -3055,11 +3068,8 @@ function initApp() {
 
     setupVisualViewportHandling();
 
-    // [신규] 홈 진도 패널 초기화
-    const pc = document.getElementById('progressCourse');
-    const lastC = localStorage.getItem('lastCourse');
-    if (pc && lastC) pc.value = lastC;
-    renderHomeProgress();
+    // [신규] 홈 진도 패널 초기화 — 본인 과정으로 맞춤(로그인 전엔 lastCourse 폴백)
+    resetHomeProgressToMyCourse();
 
     // [신규] 교회 공지사항 불러오기
     loadChurchNotices();
@@ -3088,7 +3098,7 @@ function showStep(id) {
     updateFloatingUI(false);
     document.querySelectorAll('.main-container .container > div:not(.header):not(.footer-verse)').forEach(div => div.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    if (id === 'stepHome') renderHomeProgress();
+    if (id === 'stepHome') resetHomeProgressToMyCourse();
 }
 
 /* ===== [신규] 교회 공지사항 (jbch.org RSS → Apps Script 중계기) ===== */
@@ -6950,7 +6960,7 @@ function applyRemote(store){
     Object.keys(store || {}).forEach(k => { if (!DEVICE_KEYS.has(k)) _setItem.call(localStorage, k, store[k]); });
   } finally { applyingRemote = false; }
   // 화면 새로고침 없이 진도 패널만 다시 그림
-  try { if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
+  try { if (typeof window.resetHomeProgressToMyCourse === 'function') window.resetHomeProgressToMyCourse(); else if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
 }
 
 // 접속자 수(프레즌스) — 리스너는 한 번만, 항상 현재 사용자만 표시
@@ -7046,7 +7056,7 @@ onAuthStateChanged(auth, async (user) => {
     updateAuthUI(user);
     if (!myNickname || !myCourse) openNicknameModal(true); // 닉네임·과정 없으면 설정 요구
     else publishLeaderboard();
-    try { if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
+    try { if (typeof window.resetHomeProgressToMyCourse === 'function') window.resetHomeProgressToMyCourse(); else if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
   } else {
     updateAuthUI(user);
   }
@@ -7164,7 +7174,7 @@ async function saveNickname(){
     nkRequired = false;
     updateAuthUI(currentUser);
     publishLeaderboard();
-    try { if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
+    try { if (typeof window.resetHomeProgressToMyCourse === 'function') window.resetHomeProgressToMyCourse(); else if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
     setTimeout(() => { const ov = document.getElementById('nkOverlay'); if (ov) ov.classList.remove('show'); }, 600);
   } catch(e){
     msg.className = 'nk-msg err'; msg.textContent = (typeof e === 'string') ? e : ('오류: ' + (e.message||e));
@@ -7801,13 +7811,13 @@ function isInAppBrowser(){
 function isMobile(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ''); }
 
 async function copyLink(){
-  try { await navigator.clipboard.writeText('https://tjswo757-cmd.github.io/samuel/'); return true; } catch(e){ return false; }
+  try { await navigator.clipboard.writeText('https://jbchcampusministry.github.io/samuel/'); return true; } catch(e){ return false; }
 }
 
 // 리다이렉트 로그인 결과 처리(모바일)
 getRedirectResult(auth).catch((e) => {
   if (e && e.code === 'auth/unauthorized-domain'){
-    alert('이 도메인이 Firebase에 등록되지 않았습니다.\n승인된 도메인에 tjswo757-cmd.github.io 를 추가하세요.');
+    alert('이 도메인이 Firebase에 등록되지 않았습니다.\n승인된 도메인에 jbchcampusministry.github.io 를 추가하세요.');
   }
 });
 
@@ -7831,7 +7841,7 @@ window.samuelToggleAuth = async function(){
   }
   catch(e){
     if (e && e.code === 'auth/unauthorized-domain'){
-      alert('이 도메인이 Firebase에 등록되지 않았습니다.\nFirebase 콘솔 → Authentication → Settings → 승인된 도메인 에 tjswo757-cmd.github.io 를 추가하세요.');
+      alert('이 도메인이 Firebase에 등록되지 않았습니다.\nFirebase 콘솔 → Authentication → Settings → 승인된 도메인 에 jbchcampusministry.github.io 를 추가하세요.');
     } else if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request')){
       alert('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.');
     } else {
