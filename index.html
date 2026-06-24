@@ -3996,6 +3996,11 @@ let isResizing = false;
 
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
+    // 암송 대결 중에는 암송 도우미 사용 불가
+    if (window.__gameActive && !sb.classList.contains('active')) {
+        alert('암송 대결 중에는 암송 도우미를 사용할 수 없어요.');
+        return;
+    }
     sb.classList.toggle('active');
     if (sb.classList.contains('active')) {
         applySidebarLayout();
@@ -7136,10 +7141,11 @@ window.samuelOpenLeaderboard = async function(){
 };
 
 // ===================== 실시간 암송 대결 =====================
-const Q_TIME = 120000;    // 문제당 제한시간(ms) = 2분
+const Q_TIME = 120000;    // 문제당 기본 제한시간(ms) = 2분
 const REVEAL = 4500;      // 정답 공개 시간(ms)
 const Q_COUNT = 5;        // 기본 문제 수(방장이 변경 가능)
 const Q_COUNT_OPTS = [3, 5, 7, 10, 15];
+const Q_TIME_PRESETS = [60, 90, 120]; // 제한시간 프리셋(초): 1분 / 1분30초 / 2분
 const MAX_PLAYERS = 6;
 
 let gameCode = null;
@@ -7153,6 +7159,12 @@ let myAnsweredQ = -1;
 let renderedQ = -1;
 let renderedPhase = '';
 let iAmLeaving = false; // 내가 직접 나가는 경우 "방이 종료되었어요" 알림 표시 안 함
+let roomConnUnsub = null; // .info/connected 구독(모바일 재접속 복구용)
+let lastMyScore = 0;      // 재접속 시 점수 복원용 마지막 점수
+
+// 방의 제한시간(ms) — 방장이 설정한 값, 없으면 기본 2분
+function qTimeOf(room){ const t = room && room.qTime; return (typeof t === 'number' && t >= 5000) ? t : Q_TIME; }
+function fmtQTime(ms){ const s = Math.round(ms / 1000); const m = Math.floor(s / 60), r = s % 60; return (m ? m + '분' : '') + (r ? (m ? ' ' : '') + r + '초' : (m ? '' : '0초')); }
 
 // 띄어쓰기·문장부호 차이는 무시하고 비교
 function normAns(s){ return (s || '').replace(/[\s.,·…"'""''’‘`~!?;:()]/g, ''); }
@@ -7232,11 +7244,12 @@ async function createRoom(){
       code = genCode();
     }
     await set(ref(db, 'rooms/' + code), {
-      host: currentUser.uid, hostNick: myNickname, state: 'waiting', course: course, qCount: Q_COUNT,
+      host: currentUser.uid, hostNick: myNickname, state: 'waiting', course: course, qCount: Q_COUNT, qTime: Q_TIME,
       qIndex: -1, createdAt: serverTimestamp(),
       players: { [currentUser.uid]: { nick: myNickname, score: 0, joinedAt: serverTimestamp() } }
     });
-    try { onDisconnect(ref(db, 'rooms/' + code)).remove(); } catch(e){} // 방장 나가면 방 자동 삭제
+    // 방 전체는 자동 삭제하지 않음(모바일에서 잠깐 홈화면 갔다 와도 방이 유지되도록).
+    // 방은 방장이 '나가기/종료'를 직접 누를 때만 삭제됨.
     enterRoom(code);
   } catch(e){ document.getElementById('gmMsg').textContent = '방 생성 실패: ' + (e.message||e); }
 }
@@ -7256,12 +7269,48 @@ async function joinRoom(code){
   } catch(e){ msg.textContent = '참가 실패: ' + (e.message||e); }
 }
 
+// 접속이 살아있는 동안 '연결 끊기면 내 플레이어 노드 제거' 예약(나만 정리, 방 전체는 안 건드림)
+function armRoomPresence(code){
+  if (!currentUser) return;
+  try { onDisconnect(ref(db, 'rooms/' + code + '/players/' + currentUser.uid)).remove(); } catch(e){}
+}
+// 재접속 시 내가 방에서 빠졌으면(연결이 끊겨 onDisconnect로 제거됐으면) 점수 유지한 채 다시 합류
+async function rejoinIfDropped(code){
+  if (!currentUser || gameCode !== code) return;
+  try {
+    const roomSnap = await get(ref(db, 'rooms/' + code));
+    if (!roomSnap.exists()) return; // 방이 정말 종료된 경우는 기존 onValue 처리에 맡김
+    const meRef = ref(db, 'rooms/' + code + '/players/' + currentUser.uid);
+    const meSnap = await get(meRef);
+    if (!meSnap.exists()){
+      await set(meRef, { nick: myNickname, score: lastMyScore || 0, joinedAt: serverTimestamp() });
+    }
+  } catch(e){}
+}
+// 모바일에서 화면 복귀 시 즉시 복구 + 다시 그리기
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && gameCode){
+    armRoomPresence(gameCode);
+    rejoinIfDropped(gameCode);
+    if (gameRoom){ try { onRoomUpdate(); } catch(e){} }
+  }
+});
+
 function enterRoom(code){
   gameCode = code;
-  myAnsweredQ = -1; scheduledQ = -1;
-  // 나갈 때 자동 정리
-  const meRef = ref(db, 'rooms/' + code + '/players/' + currentUser.uid);
-  try { onDisconnect(meRef).remove(); } catch(e){}
+  myAnsweredQ = -1; scheduledQ = -1; lastMyScore = 0;
+  // 대결 중에는 암송 도우미(사이드바) 사용 차단 + 열려 있으면 닫기
+  window.__gameActive = true;
+  try { const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('active'); } catch(e){}
+  // 연결이 끊겼다 붙을 때(모바일 홈화면 갔다 오기 등) 내 자리를 자동 복구
+  armRoomPresence(code);
+  if (roomConnUnsub){ try { roomConnUnsub(); } catch(e){} roomConnUnsub = null; }
+  roomConnUnsub = onValue(ref(db, '.info/connected'), (snap) => {
+    if (snap.val() === true && gameCode === code && currentUser){
+      armRoomPresence(code);
+      rejoinIfDropped(code);
+    }
+  });
   gameUnsub = onValue(ref(db, 'rooms/' + code), (snap) => {
     if (!snap.exists()){ // 방이 사라짐(호스트 나감)
       gameRoom = null;
@@ -7281,8 +7330,10 @@ function enterRoom(code){
 
 function cleanupRoomState(){
   if (gameUnsub){ gameUnsub(); gameUnsub = null; }
+  if (roomConnUnsub){ try { roomConnUnsub(); } catch(e){} roomConnUnsub = null; }
   clearTimeout(hostTimer); clearInterval(tickTimer);
-  gameCode = null; gameRoom = null; scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1; renderedQ = -1; renderedPhase = ''; iAmLeaving = false;
+  gameCode = null; gameRoom = null; scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1; renderedQ = -1; renderedPhase = ''; iAmLeaving = false; lastMyScore = 0;
+  window.__gameActive = false;
 }
 
 function leaveRoom(){
@@ -7298,6 +7349,8 @@ function leaveRoom(){
 function onRoomUpdate(){
   const room = gameRoom;
   if (!room) return;
+  // 재접속 복구를 위해 내 최신 점수 기억
+  if (room.players && currentUser && room.players[currentUser.uid]) lastMyScore = room.players[currentUser.uid].score || 0;
   // 게임이 시작되면 화면을 크게(앱처럼)
   const ov = document.getElementById('gmOverlay');
   const panel = ov && ov.querySelector('.sm-panel');
@@ -7320,6 +7373,9 @@ function renderRoom(){
   const course = room.course || 4;
   const sel = room.days || [];
   const qCount = room.qCount || Q_COUNT;
+  const qtMs = qTimeOf(room);
+  const qSec = Math.round(qtMs / 1000);
+  const isPresetTime = Q_TIME_PRESETS.includes(qSec);
   const dayKeys = Object.keys(window.bibleData || {});
   const plist = ps.map(p =>
     '<div class="g-player' + (p.uid === room.host ? ' host' : '') + '">' + escapeHtml(p.nick) + '</div>'
@@ -7335,12 +7391,20 @@ function renderRoom(){
       '<div class="g-set-row"><span>문제 수</span>' +
         '<select id="gmQCount">' + Q_COUNT_OPTS.map(n => '<option value="' + n + '"' + (n === qCount ? ' selected' : '') + '>' + n + '문제</option>').join('') + '</select>' +
       '</div>' +
+      '<div class="g-set-row"><span>제한시간</span>' +
+        '<select id="gmTime">' +
+          Q_TIME_PRESETS.map(s => '<option value="' + s + '"' + (isPresetTime && s === qSec ? ' selected' : '') + '>' + fmtQTime(s * 1000) + '</option>').join('') +
+          '<option value="custom"' + (!isPresetTime ? ' selected' : '') + '>사용자 설정</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="g-set-row" id="gmTimeCustomRow"' + (isPresetTime ? ' style="display:none;"' : '') + '><span>직접 입력(초)</span>' +
+        '<input type="number" id="gmTimeCustom" min="10" max="600" value="' + (isPresetTime ? '' : qSec) + '" placeholder="예: 45"></div>' +
       '<div class="g-set-label">일차 <span class="g-set-hint">(복수 선택 가능 · 안 고르면 전체 랜덤)</span></div>' +
       '<div class="g-daygrid">' + dayKeys.map(d => '<label class="g-day' + (sel.includes(d) ? ' on' : '') + '"><input type="checkbox" data-day="' + d + '"' + (sel.includes(d) ? ' checked' : '') + '>' + d + '</label>').join('') + '</div>' +
       '</div>';
   } else {
     const range = sel.length ? sel.join(', ') : '전체 일차 (랜덤)';
-    setHtml = '<div class="g-set"><div class="g-set-label">출제 범위: <b>' + course + '과정 · ' + range + '</b><br>문제 수: <b>' + qCount + '문제</b></div></div>';
+    setHtml = '<div class="g-set"><div class="g-set-label">출제 범위: <b>' + course + '과정 · ' + range + '</b><br>문제 수: <b>' + qCount + '문제</b><br>제한시간: <b>' + fmtQTime(qtMs) + '</b></div></div>';
   }
 
   gmBody().innerHTML =
@@ -7360,6 +7424,21 @@ function renderRoom(){
     if (cs) cs.onchange = () => { try { update(ref(db, 'rooms/' + gameCode), { course: Number(cs.value) }); } catch(e){} };
     const qc = document.getElementById('gmQCount');
     if (qc) qc.onchange = () => { try { update(ref(db, 'rooms/' + gameCode), { qCount: Number(qc.value) }); } catch(e){} };
+    const ts = document.getElementById('gmTime');
+    const tcRow = document.getElementById('gmTimeCustomRow');
+    const tc = document.getElementById('gmTimeCustom');
+    const clampSec = v => Math.min(600, Math.max(10, parseInt(v, 10) || 60));
+    if (ts) ts.onchange = () => {
+      if (ts.value === 'custom'){
+        if (tcRow) tcRow.style.display = '';
+        const sec = clampSec(tc && tc.value);
+        try { update(ref(db, 'rooms/' + gameCode), { qTime: sec * 1000 }); } catch(e){}
+      } else {
+        if (tcRow) tcRow.style.display = 'none';
+        try { update(ref(db, 'rooms/' + gameCode), { qTime: Number(ts.value) * 1000 }); } catch(e){}
+      }
+    };
+    if (tc) tc.onchange = () => { const sec = clampSec(tc.value); tc.value = sec; try { update(ref(db, 'rooms/' + gameCode), { qTime: sec * 1000 }); } catch(e){} };
     gmBody().querySelectorAll('.g-daygrid input').forEach(chk => chk.onchange = () => {
       const cur = (gameRoom.days || []).slice();
       const day = chk.dataset.day, i = cur.indexOf(day);
@@ -7407,7 +7486,7 @@ function renderPlaying(){
   const room = gameRoom, q = room.question;
   if (!q) return;
   const elapsed = Date.now() - q.startedAt;
-  const revealing = elapsed >= Q_TIME || allAnswered(room);
+  const revealing = elapsed >= qTimeOf(room) || allAnswered(room);
   const mine = room.answers && room.answers[room.qIndex] && room.answers[room.qIndex][currentUser.uid];
   const solved = !!(mine && mine.correct);
   const phase = revealing ? 'reveal' : (solved ? 'solved' : 'input');
@@ -7454,11 +7533,12 @@ function startTick(){
   clearInterval(tickTimer);
   tickTimer = setInterval(() => {
     if (!gameRoom || gameRoom.state !== 'playing' || !gameRoom.question){ clearInterval(tickTimer); return; }
+    const qt = qTimeOf(gameRoom);
     const elapsed = Date.now() - gameRoom.question.startedAt;
-    const ratio = Math.max(0, 1 - elapsed / Q_TIME);
+    const ratio = Math.max(0, 1 - elapsed / qt);
     const bar = document.getElementById('gmBar');
     if (bar) bar.style.width = (ratio * 100) + '%';
-    if (elapsed >= Q_TIME){ renderPlaying(); clearInterval(tickTimer); } // 시간 종료 → 정답 공개
+    if (elapsed >= qt){ renderPlaying(); clearInterval(tickTimer); } // 시간 종료 → 정답 공개
   }, 250);
 }
 
@@ -7503,7 +7583,7 @@ function hostSchedule(){
   }
   if (scheduledQ === room.qIndex) return;
   scheduledQ = room.qIndex;
-  const end = room.question.startedAt + Q_TIME + REVEAL;
+  const end = room.question.startedAt + qTimeOf(room) + REVEAL;
   clearTimeout(hostTimer);
   hostTimer = setTimeout(() => hostAdvance(room), Math.max(300, end - Date.now()));
 }
