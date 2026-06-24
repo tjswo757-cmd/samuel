@@ -469,8 +469,8 @@
     body.study-immersive #scrollContent { touch-action: none; }
     body.study-immersive #globalHeader { position: fixed; top: 0; left: 0; right: 0; transform: translateY(-100%); transition: transform .28s ease; z-index: 3000; will-change: transform; }
     body.study-immersive .app-footer { position: fixed; bottom: 0; left: 0; right: 0; transform: translateY(100%); transition: transform .28s ease; z-index: 3000; }
-    body.study-immersive.chrome-reveal #globalHeader { transform: translateY(0); }
-    body.study-immersive.chrome-reveal .app-footer { transform: translateY(0); }
+    body.study-immersive.reveal-top #globalHeader { transform: translateY(0); }      /* 최상단에서만 상단 바 */
+    body.study-immersive.reveal-bottom .app-footer { transform: translateY(0); }     /* 최하단에서만 하단 바 */
     /* 몰입 모드: 스크롤 절대 안 함(overflow hidden). 헤더/푸터 자리(상72·하62)를 항상 비워두고 본문을 그 사이에 고정
        → 스크롤 제스처 시 바만 그 자리로 슬라이드되어 올라오고, 본문 크기·위치는 그대로 유지(겹치지 않음) */
     body.study-immersive #scrollContent { justify-content: safe center; overflow: hidden; padding-top: 12px; padding-bottom: 12px; }
@@ -484,7 +484,7 @@
     #studyZoomCtl { position: fixed; top: 12px; right: 16px; z-index: 3500; display: none; align-items: center; gap: 4px; background: rgba(255,255,255,0.96); border: 1px solid #e6e9ee; border-radius: 22px; padding: 4px 7px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); transition: top .28s ease, opacity .25s ease; }
     body.study-immersive #studyZoomCtl { display: flex; opacity: 0; pointer-events: none; }       /* 평소엔 숨김 */
     body.study-immersive #studyZoomCtl.visible { opacity: 1; pointer-events: auto; }               /* 확대 동작 중에만 표시 */
-    body.study-immersive.chrome-reveal #studyZoomCtl { top: 82px; }   /* 헤더 나타나면 그 아래로 → 안 가림 */
+    body.study-immersive.reveal-top #studyZoomCtl { top: 82px; }   /* 헤더 나타나면 그 아래로 → 안 가림 */
     .szc-btn, .szc-lock { width: 30px; height: 30px; border: none; background: #f3f5f8; border-radius: 50%; cursor: pointer; font-size: 17px; font-weight: 700; color: #444; display: flex; align-items: center; justify-content: center; line-height: 1; }
     .szc-btn:hover, .szc-lock:hover { background: #e7ebf0; }
     .szc-lock.locked { background: #e8f4fd; }
@@ -791,7 +791,7 @@
     /* 우측 하단 네비게이션 */
     /* 일차 이동 버튼: 우측 상단(확대 컨트롤 바로 아래) — 본문 하단 암송을 가리지 않게 */
     .study-floating-nav { position: fixed; top: 54px; right: 16px; bottom: auto; display: flex; gap: 8px; z-index: 3100; background: rgba(255, 255, 255, 0.9); padding: 4px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); backdrop-filter: blur(5px); transition: top .28s ease; }
-    body.study-immersive.chrome-reveal .study-floating-nav { top: 124px; }   /* 헤더 나타나면 확대 컨트롤과 함께 아래로 */
+    body.study-immersive.reveal-top .study-floating-nav { top: 124px; }   /* 헤더 나타나면 확대 컨트롤과 함께 아래로 */
     .float-btn { background: var(--secondary); color: white; border: none; padding: 7px 13px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
     .float-btn:hover { background: var(--primary); transform: translateY(-2px); }
 
@@ -2673,13 +2673,24 @@ function exitAppFullscreen() {
 }
 function toggleFullscreen() { isFullscreen() ? exitAppFullscreen() : enterAppFullscreen(); }
 
-// [신규] 몰입 모드에서 위/아래 스크롤·스와이프 시 상단·하단 바를 잠깐 표시
+// [신규] 몰입 모드에서 상단·하단 바를 잠깐 표시(스크롤 불가 화면·진입 시 등)
 let chromeRevealTimer = null;
 function revealChrome() {
     if (!document.body.classList.contains('study-immersive')) return;
-    document.body.classList.add('chrome-reveal');
+    document.body.classList.add('reveal-top', 'reveal-bottom');
     if (chromeRevealTimer) clearTimeout(chromeRevealTimer);
-    chromeRevealTimer = setTimeout(() => document.body.classList.remove('chrome-reveal'), 2800);
+    chromeRevealTimer = setTimeout(() => document.body.classList.remove('reveal-top', 'reveal-bottom'), 2800);
+}
+// 스크롤 가능 화면: 최상단=상단 바, 최하단=하단 바만 표시. 중간에선 둘 다 숨김.
+function onStudyChromeScroll() {
+    if (!document.body.classList.contains('study-immersive')) return;
+    const sc = document.getElementById('scrollContent');
+    if (!sc) return;
+    const scrollable = sc.scrollHeight > sc.clientHeight + 8;
+    if (!scrollable) { revealChrome(); return; }   // 한 화면(스크롤 불가)이면 제스처 시 잠깐 표시
+    if (chromeRevealTimer) { clearTimeout(chromeRevealTimer); chromeRevealTimer = null; }
+    document.body.classList.toggle('reveal-top', sc.scrollTop <= 4);
+    document.body.classList.toggle('reveal-bottom', (sc.scrollTop + sc.clientHeight) >= (sc.scrollHeight - 4));
 }
 // 첫 사용자 동작에서 자동으로 전체화면 시도(브라우저 정책상 제스처 필요). iOS Safari는 미지원 → 홈화면 추가 권장.
 function armAutoFullscreen() {
@@ -3028,9 +3039,9 @@ function initApp() {
     // 몰입 모드: 스크롤/스와이프 제스처로 상단·하단 바 잠깐 표시
     const scEl = document.getElementById('scrollContent');
     if (scEl) {
-        scEl.addEventListener('wheel', revealChrome, { passive: true });
-        scEl.addEventListener('scroll', revealChrome, { passive: true });
-        scEl.addEventListener('touchmove', revealChrome, { passive: true });
+        scEl.addEventListener('wheel', onStudyChromeScroll, { passive: true });
+        scEl.addEventListener('scroll', onStudyChromeScroll, { passive: true });
+        scEl.addEventListener('touchmove', onStudyChromeScroll, { passive: true });
         // Ctrl+휠로 화면 확대/축소(트랙패드/마우스)
         scEl.addEventListener('wheel', e => {
             if (!e.ctrlKey || !document.body.classList.contains('study-immersive')) return;
@@ -3207,7 +3218,7 @@ function goHome() {
     if (studyArea) studyArea.style.display = 'none';
     if (plowingDetail) plowingDetail.style.display = 'none';
     if (scriptViewer) scriptViewer.style.display = 'none';
-    document.body.classList.remove('study-immersive', 'chrome-reveal', 'study-zoomscroll'); // 몰입 모드 해제
+    document.body.classList.remove('study-immersive', 'reveal-top', 'reveal-bottom', 'study-zoomscroll'); // 몰입 모드 해제
     const gh = document.getElementById('globalHeader'); if (gh) gh.classList.remove('header-hidden');
     const af = document.querySelector('.app-footer'); if (af) af.classList.remove('footer-hidden');
     const sc = document.getElementById('scrollContent');
@@ -3249,7 +3260,7 @@ const scriptViewer = document.getElementById('stepScriptViewer');
     if (studyArea.style.display === 'block') {
         updateFloatingUI(false);
         studyArea.style.display = 'none';
-        document.body.classList.remove('study-immersive', 'chrome-reveal'); // 몰입 모드 해제
+        document.body.classList.remove('study-immersive', 'reveal-top', 'reveal-bottom'); // 몰입 모드 해제
         document.getElementById('globalHeader').classList.remove('header-hidden');
         document.querySelector('.app-footer').classList.remove('footer-hidden');
         
@@ -3400,7 +3411,7 @@ function startStudy() {
 
     // 몰입 모드: 전역 헤더(사무엘학교)·하단(말씀구절)을 숨겨 암송 본문을 전체화면에 꽉 차게 표시
     document.body.classList.add('study-immersive');
-    document.body.classList.remove('chrome-reveal');
+    document.body.classList.remove('reveal-top', 'reveal-bottom');
     loadStudyZoom();   // 고정한 확대 크기 복원
     updateFloatingUI(true);
 
