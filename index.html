@@ -7001,7 +7001,8 @@ function subscribeCount(){
     snap.forEach((child) => {
       const v = child.val();
       const ts = v && v.ts;
-      if (typeof ts !== 'number' || (now - ts) < 120000) n++;
+      // 유효한 최근(2분 이내) 시간값이 있는 항목만 집계 — 시간값 없는 유령 항목 제외
+      if (typeof ts === 'number' && (now - ts) < 120000) n++;
     });
     const el = document.getElementById('onlineCount');
     if (el) el.textContent = '👥 ' + n;
@@ -7014,6 +7015,60 @@ function subscribeCount(){
 
 // 살아있음을 주기적으로 갱신(heartbeat)
 setInterval(() => { if (presenceUid) goOnline(); }, 45000);
+
+// ===== 관리자 전용 접속자 디버그 =====
+// 관리자 구글 이메일(소문자). 여러 명이면 콤마로 추가: ['a@gmail.com','b@gmail.com']
+const ADMIN_EMAILS = ['tjswo757@gmail.com', 'sseonjae757@gmail.com'];
+function isAdmin(){
+  return !!(currentUser && currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase()));
+}
+
+async function showAdminPresence(){
+  if (!isAdmin()) return; // 관리자만
+  let statusSnap = null, lbSnap = null;
+  try { statusSnap = await get(ref(db, 'status')); }
+  catch(e){ smAlert('status 읽기 실패: ' + (e.message || e)); return; }
+  try { lbSnap = await get(ref(db, 'leaderboard')); } catch(e){}
+  const nickMap = {};
+  if (lbSnap && lbSnap.exists()) lbSnap.forEach(c => { const v = c.val(); if (v && v.nick) nickMap[c.key] = v.nick; });
+  const now = Date.now();
+  const rows = []; let counted = 0;
+  if (statusSnap && statusSnap.exists()){
+    statusSnap.forEach(c => {
+      const v = c.val() || {};
+      const ts = v.ts;
+      const hasTs = typeof ts === 'number';
+      const isCounted = hasTs && (now - ts) < 120000;
+      if (isCounted) counted++;
+      rows.push({ nick: nickMap[c.key] || '(익명·기록 없음)', uid: c.key, ageS: hasTs ? Math.round((now - ts) / 1000) : null, hasTs, isCounted });
+    });
+  }
+  rows.sort((a, b) => (a.hasTs ? a.ageS : 1e9) - (b.hasTs ? b.ageS : 1e9));
+  let ov = document.getElementById('admOverlay');
+  if (!ov){
+    ov = document.createElement('div'); ov.id = 'admOverlay'; ov.className = 'sm-overlay';
+    ov.innerHTML = "<div class='sm-panel'><div class='sm-head'><h2>👥 접속자 디버그</h2><button class='sm-close' id='admClose'>✕</button></div><div class='sm-body' id='admBody'></div></div>";
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
+    document.getElementById('admClose').onclick = () => ov.classList.remove('show');
+  }
+  const list = rows.map((r, i) => {
+    const age = r.hasTs ? (r.ageS + '초 전') : '시간값 없음';
+    const tag = r.isCounted
+      ? "<span class='lb-val' style='color:#27ae60'>집계</span>"
+      : "<span class='lb-val' style='color:#e74c3c'>제외</span>";
+    return "<div class='lb-row'><div class='lb-rank'>" + (i + 1) + "</div><div class='lb-nick'>" + escapeHtml(r.nick) +
+      "<div style='font-size:.72em;color:#9aa6b3;font-weight:600;'>…" + escapeHtml(String(r.uid).slice(-6)) + " · " + age + "</div></div>" + tag + "</div>";
+  }).join('') || "<div class='lb-empty'>status에 항목이 없어요.</div>";
+  document.getElementById('admBody').innerHTML =
+    "<div style='text-align:center;font-weight:800;margin-bottom:12px;'>실제 집계 인원: <span style='color:var(--primary)'>" + counted + "명</span> · 전체 항목 " + rows.length + "개</div>" +
+    list + "<button class='g-btn ghost' id='admRefresh' style='margin-top:14px;'>새로고침</button>";
+  document.getElementById('admRefresh').onclick = showAdminPresence;
+  ov.classList.add('show');
+}
+window.samuelAdminPresence = showAdminPresence;
+// 👥 배지 클릭 → 관리자면 디버그 패널
+(function(){ const oc = document.getElementById('onlineCount'); if (oc) oc.addEventListener('click', () => { if (isAdmin()) showAdminPresence(); }); })();
 
 function updateAuthUI(user){
   const btn = document.getElementById('authBtn');
@@ -7033,6 +7088,9 @@ function updateAuthUI(user){
   if (wel){
     wel.style.display = loggedIn ? 'inline' : 'none';
   }
+  // 관리자면 👥 배지를 눌러 접속자 상세를 볼 수 있게 표시
+  const oc = document.getElementById('onlineCount');
+  if (oc){ const adm = isAdmin(); oc.style.cursor = adm ? 'pointer' : ''; oc.title = adm ? '접속자 상세 보기(관리자)' : '지금 접속 중인 인원'; }
   // 마이페이지·점수 계산기 등 classic 코드에서 쓰도록 전역 노출
   window.myNickname = loggedIn ? myNickname : null;
   window.myCourse = loggedIn ? myCourse : null;
