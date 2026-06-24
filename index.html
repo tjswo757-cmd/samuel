@@ -220,6 +220,11 @@
     [data-theme="dark"] .menu-row-desc { color: #93a0b0; }
     [data-theme="dark"] .menu-row-arrow { color: #5b6675; }
 
+    /* [신규] 홈 - 로그인 환영 배너 */
+    .home-welcome { margin-top: 18px; padding: 16px 20px; border-radius: 16px; background: linear-gradient(120deg, #2193b0, #6dd5ed); color: #fff; font-size: 1.12em; font-weight: 700; box-shadow: 0 8px 22px rgba(33,147,176,0.28); display: flex; align-items: center; gap: 8px; }
+    .home-welcome b { font-weight: 800; }
+    [data-theme="dark"] .home-welcome { background: linear-gradient(120deg, #1d5f74, #2b8aa3); box-shadow: 0 8px 22px rgba(0,0,0,0.4); }
+
     /* [신규] 홈 - 나의 진도 + 공지사항 2단 배치 (동일 크기) */
     .home-bottom-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; margin-top: 24px; }
     .home-bottom-row > .home-progress, .home-bottom-row > .home-notice { margin-top: 0; }
@@ -1633,6 +1638,7 @@
         <main class="scroll-content" id="scrollContent">
             <div class="container">
                 <div id="stepHome" class="active no-print">
+                    <div class="home-welcome" id="homeWelcome" style="display:none;"></div>
                     <div class="main-menu-list">
                         <button class="menu-row study" onclick="selectRootMode('study')">
                             <span class="menu-row-ico">📖</span>
@@ -2714,13 +2720,14 @@ async function resetProgress() {
 
 // [신규] 수료 점수 계산기(마이페이지) ----------------------------------
 const EXAM_KEY = 'samuel_exam';
-// 학사 안내(총 1000점) 구성 — 입학과제200 + 일일시험600(월200·화200·수100·목100) + 조별활동200
+// 학사 안내(총 1000점) 구성 — 입학과제200 + 일일시험600 + 조별활동200
+// 요일은 기수마다 달라질 수 있어 표기하지 않고 일차 내용으로만 구분
 const EXAM_ITEMS = [
     { k: 'entrance', label: '입학과제', sub: '각오문·밭갈이·대본 등 제출', max: 200 },
-    { k: 'mon', label: '월요일 일일시험', sub: '5·6일차 암송 및 대본', max: 200 },
-    { k: 'tue', label: '화요일 일일시험', sub: '1·2일차 암송 및 대본', max: 200 },
-    { k: 'wed', label: '수요일 일일시험', sub: '3일차 암송 및 대본', max: 100 },
-    { k: 'thu', label: '목요일 일일시험', sub: '4일차 암송 및 대본', max: 100 },
+    { k: 'mon', label: '5·6일차 암송 및 대본', sub: '', max: 200 },
+    { k: 'tue', label: '1·2일차 암송 및 대본', sub: '', max: 200 },
+    { k: 'wed', label: '3일차 암송 및 대본', sub: '', max: 100 },
+    { k: 'thu', label: '4일차 암송 및 대본', sub: '', max: 100 },
     { k: 'group', label: '조별활동', sub: '발표', max: 200 }
 ];
 // 과정별 수료 점수(사용자 제공): 1·2과정 700, 3·4과정 800
@@ -2744,7 +2751,7 @@ function renderExamCalc() {
     const d = getExamData();
     const rows = EXAM_ITEMS.map(it => `
         <div class="ex-row">
-            <div class="ex-info"><span class="ex-name">${it.label}</span><span class="ex-sub">${it.sub}</span></div>
+            <div class="ex-info"><span class="ex-name">${it.label}</span>${it.sub ? `<span class="ex-sub">${it.sub}</span>` : ''}</div>
             <div class="ex-input">
                 <input type="number" id="ex-${it.k}" min="0" max="${it.max}" inputmode="numeric"
                     value="${d.scores[it.k] === '' ? '' : d.scores[it.k]}" placeholder="–" oninput="recalcExam()">
@@ -2911,33 +2918,7 @@ function renderStats() {
             <div class="stat-card"><div class="stat-ico">✍️</div><div class="stat-value">${fmtNum(s.strokes)}</div><div class="stat-name">누적 필기 획</div><div class="stat-extra">손으로 적은 흔적</div></div>
         </div>`;
 
-    // 학습 잔디(히트맵) — 최근 18주
-    const weeks = 18;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const lastSat = new Date(today); lastSat.setDate(today.getDate() + (6 - today.getDay()));
-    const firstSun = new Date(lastSat); firstSun.setDate(lastSat.getDate() - (weeks * 7 - 1));
-    let cols = '';
-    for (let w = 0; w < weeks; w++) {
-        cols += '<div class="hm-col">';
-        for (let d = 0; d < 7; d++) {
-            const dt = new Date(firstSun); dt.setDate(firstSun.getDate() + w * 7 + d);
-            const key = dateKeyFmt(dt);
-            const cnt = s.days[key] || 0;
-            const lvl = dt > today ? 'f' : (cnt >= 3 ? 3 : cnt);
-            const title = dt > today ? '' : `${key} · ${cnt ? cnt + '회 활동' : '활동 없음'}`;
-            cols += `<div class="hm-cell lvl-${lvl}"${title ? ` title="${title}"` : ''}></div>`;
-        }
-        cols += '</div>';
-    }
-    const heatmap = `
-        <div class="heatmap-card">
-            <h3>🌿 학습 잔디</h3>
-            <div class="heatmap-sub">최근 ${weeks}주간의 활동 — 진할수록 그날 많이 공부했어요</div>
-            <div class="heatmap-scroll"><div class="heatmap">${cols}</div></div>
-            <div class="hm-legend">적음 <span class="hm-cell lvl-0"></span><span class="hm-cell lvl-1"></span><span class="hm-cell lvl-2"></span><span class="hm-cell lvl-3"></span> 많음</div>
-        </div>`;
-
-    box.innerHTML = `<div class="stats-hero">${gauge}${streakCard}</div>${renderExamCalc()}${cards}${heatmap}`;
+    box.innerHTML = `<div class="stats-hero">${gauge}${streakCard}</div>${renderExamCalc()}${cards}`;
     recalcExam();
 }
 
@@ -6949,15 +6930,28 @@ setInterval(() => { if (presenceUid) goOnline(); }, 45000);
 
 function updateAuthUI(user){
   const btn = document.getElementById('authBtn');
-  if (!btn) return;
-  if (user && !user.isAnonymous){
-    btn.textContent = myNickname || '내 계정';
-    btn.title = (myNickname ? myNickname + ' — ' : '') + '계정 관리';
-    btn.classList.add('logged-in');
-  } else {
-    btn.textContent = '로그인';
-    btn.title = '구글 계정으로 로그인';
-    btn.classList.remove('logged-in');
+  const wel = document.getElementById('homeWelcome');
+  const loggedIn = !!(user && !user.isAnonymous);
+  if (btn){
+    if (loggedIn){
+      btn.textContent = myNickname || '내 계정';
+      btn.title = (myNickname ? myNickname + ' — ' : '') + '계정 관리';
+      btn.classList.add('logged-in');
+    } else {
+      btn.textContent = '로그인';
+      btn.title = '구글 계정으로 로그인';
+      btn.classList.remove('logged-in');
+    }
+  }
+  if (wel){
+    if (loggedIn && myNickname){
+      wel.innerHTML = '👋 <b></b>님, 환영합니다!';
+      wel.querySelector('b').textContent = myNickname;
+      wel.style.display = 'flex';
+    } else {
+      wel.style.display = 'none';
+      wel.textContent = '';
+    }
   }
 }
 
