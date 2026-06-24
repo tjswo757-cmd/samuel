@@ -1390,6 +1390,12 @@
     .hm-legend { display: flex; align-items: center; gap: 6px; justify-content: flex-end; margin-top: 10px; font-size: 0.75em; color: #9aa6b2; }
     .hm-legend .hm-cell { width: 12px; height: 12px; }
 
+    /* 마이페이지 프로필(닉네임·과정) */
+    .mypage-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .mp-nick { font-size: 1.3em; font-weight: 800; color: var(--secondary); }
+    .mp-course { font-size: 0.82em; font-weight: 800; color: #fff; background: var(--primary); border-radius: 999px; padding: 4px 12px; }
+    [data-theme="dark"] .mp-nick { color: #eef2f7; }
+
     /* 수료 점수 계산기 */
     .exam-card { background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
     .exam-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -1695,7 +1701,7 @@
                         </button>
                         <button class="menu-row battle" onclick="samuelOpenGame()">
                             <span class="menu-row-ico">⚔️</span>
-                            <span class="menu-row-text"><span class="menu-row-title">암송 대결</span><span class="menu-row-desc">방을 만들어 최대 6명이 실시간으로 구절 맞히기</span></span>
+                            <span class="menu-row-text"><span class="menu-row-title">암송 게임</span><span class="menu-row-desc">방을 만들어 친구들과 실시간 암송 대결 (과정 달라도 OK)</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                     </div>
@@ -2769,6 +2775,7 @@ function getExamData() {
     const scores = {};
     EXAM_ITEMS.forEach(it => { const v = src[it.k]; scores[it.k] = (v === 0 || (typeof v === 'number' && !isNaN(v))) ? v : ''; });
     let course = parseInt(d.course, 10);
+    if (![1, 2, 3, 4].includes(course)) course = parseInt(window.myCourse, 10); // 로그인 시 선택한 본인 과정 기본값
     if (![1, 2, 3, 4].includes(course)) course = parseInt(localStorage.getItem('lastCourse'), 10);
     if (![1, 2, 3, 4].includes(course)) course = 1;
     return { course, scores };
@@ -2946,7 +2953,13 @@ function renderStats() {
             <div class="stat-card"><div class="stat-ico">✍️</div><div class="stat-value">${fmtNum(s.strokes)}</div><div class="stat-name">누적 필기 획</div><div class="stat-extra">손으로 적은 흔적</div></div>
         </div>`;
 
-    box.innerHTML = `<div class="stats-hero">${gauge}${streakCard}</div>${renderExamCalc()}${cards}`;
+    const mpNick = window.myNickname;
+    const mpC = parseInt(window.myCourse, 10);
+    const mpCourse = [1, 2, 3, 4].includes(mpC) ? mpC + '과정' : '';
+    const profileHtml = mpNick
+        ? `<div class="mypage-profile"><span class="mp-nick">${escHtml(mpNick)}</span>${mpCourse ? `<span class="mp-course">${mpCourse}</span>` : ''}</div>`
+        : '';
+    box.innerHTML = `${profileHtml}<div class="stats-hero">${gauge}${streakCard}</div>${renderExamCalc()}${cards}`;
     recalcExam();
 }
 
@@ -4025,9 +4038,9 @@ let isResizing = false;
 
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
-    // 암송 대결 중에는 암송 도우미 사용 불가
+    // 암송 게임 중에는 암송 도우미 사용 불가
     if (window.__gameActive && !sb.classList.contains('active')) {
-        alert('암송 대결 중에는 암송 도우미를 사용할 수 없어요.');
+        alert('암송 게임 중에는 암송 도우미를 사용할 수 없어요.');
         return;
     }
     sb.classList.toggle('active');
@@ -6877,6 +6890,7 @@ let currentUser = null;
 let applyingRemote = false;
 let uploadTimer = null;
 let myNickname = null;
+let myCourse = null; // 로그인 시 선택한 본인 과정(1~4)
 
 // localStorage 쓰기를 가로채 변경 시 자동 업로드
 const _setItem = Storage.prototype.setItem;
@@ -7002,12 +7016,15 @@ function updateAuthUI(user){
   if (wel){
     wel.style.display = loggedIn ? 'inline' : 'none';
   }
+  // 마이페이지·점수 계산기 등 classic 코드에서 쓰도록 전역 노출
+  window.myNickname = loggedIn ? myNickname : null;
+  window.myCourse = loggedIn ? myCourse : null;
 }
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   if (!user){
-    myNickname = null;
+    myNickname = null; myCourse = null;
     updateAuthUI(null);
     try { await signInAnonymously(auth); } catch(e){ console.warn('익명 로그인 실패', e); }
     return;
@@ -7024,9 +7041,12 @@ onAuthStateChanged(auth, async (user) => {
       }
     } catch(e){ console.warn('동기화 불러오기 실패', e); }
     myNickname = (snap && snap.exists() && snap.val().nickname) ? snap.val().nickname : null;
+    const sc = snap && snap.exists() && parseInt(snap.val().course, 10);
+    myCourse = [1, 2, 3, 4].includes(sc) ? sc : null;
     updateAuthUI(user);
-    if (!myNickname) openNicknameModal(true); // 닉네임 없으면 설정 요구
+    if (!myNickname || !myCourse) openNicknameModal(true); // 닉네임·과정 없으면 설정 요구
     else publishLeaderboard();
+    try { if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
   } else {
     updateAuthUI(user);
   }
@@ -7062,7 +7082,7 @@ function ensureModals(){
         '<h3>내 계정</h3>' +
         '<div class="nk-current" id="nkCurrentNick"></div>' +
         '<div class="nk-btns">' +
-          '<button class="nk-btn ghost" id="nkChangeBtn">닉네임 변경</button>' +
+          '<button class="nk-btn ghost" id="nkChangeBtn">닉네임·과정 변경</button>' +
           '<button class="nk-btn primary" id="nkLogoutBtn" style="background:#e74c3c;">로그아웃</button>' +
         '</div>' +
         '<div class="nk-btns"><button class="nk-btn ghost" id="nkCloseBtn">닫기</button></div>' +
@@ -7071,6 +7091,8 @@ function ensureModals(){
         '<h3 id="nkEditTitle">닉네임 설정</h3>' +
         '<p class="nk-desc">이 사이트에서 사용할 이름이에요. (2~12자, 중복 불가)</p>' +
         '<input type="text" class="nk-input" id="nkInput" placeholder="닉네임 입력" maxlength="12" autocomplete="off">' +
+        '<p class="nk-desc" style="margin-top:14px;">현재 진행 중인 과정을 선택하세요.</p>' +
+        '<select class="nk-input" id="nkCourse">' + [1,2,3,4].map(c => '<option value="' + c + '">' + c + '과정</option>').join('') + '</select>' +
         '<div class="nk-msg" id="nkMsg"></div>' +
         '<div class="nk-btns">' +
           '<button class="nk-btn ghost" id="nkCancelBtn">취소</button>' +
@@ -7101,6 +7123,13 @@ function showEditView(required){
   document.getElementById('nkCancelBtn').style.display = required ? 'none' : '';
   const inp = document.getElementById('nkInput');
   inp.value = myNickname || '';
+  const csel = document.getElementById('nkCourse');
+  if (csel){
+    let c = parseInt(myCourse, 10);
+    if (![1,2,3,4].includes(c)) c = parseInt(localStorage.getItem('lastCourse'), 10);
+    if (![1,2,3,4].includes(c)) c = 1;
+    csel.value = String(c);
+  }
   document.getElementById('nkMsg').textContent = '';
   setTimeout(() => inp.focus(), 50);
 }
@@ -7113,7 +7142,7 @@ function openNicknameModal(required){
 function openAccountModal(){
   ensureModals();
   nkRequired = false;
-  document.getElementById('nkCurrentNick').textContent = myNickname ? ('@' + myNickname) : '(닉네임 없음)';
+  document.getElementById('nkCurrentNick').textContent = (myNickname ? ('@' + myNickname) : '(닉네임 없음)') + ([1,2,3,4].includes(parseInt(myCourse,10)) ? '  ·  ' + myCourse + '과정' : '');
   document.getElementById('nkAccountView').style.display = 'block';
   document.getElementById('nkEditView').style.display = 'none';
   document.getElementById('nkOverlay').classList.add('show');
@@ -7125,10 +7154,17 @@ async function saveNickname(){
   btn.disabled = true;
   try {
     await claimNickname(document.getElementById('nkInput').value);
+    const csel = document.getElementById('nkCourse');
+    let c = csel ? parseInt(csel.value, 10) : NaN;
+    if (![1,2,3,4].includes(c)) c = 1;
+    await set(ref(db, 'users/' + currentUser.uid + '/course'), c);
+    myCourse = c;
+    try { localStorage.setItem('lastCourse', String(c)); } catch(e){}
     msg.className = 'nk-msg ok'; msg.textContent = '저장되었어요!';
     nkRequired = false;
     updateAuthUI(currentUser);
     publishLeaderboard();
+    try { if (typeof window.renderHomeProgress === 'function') window.renderHomeProgress(); } catch(e){}
     setTimeout(() => { const ov = document.getElementById('nkOverlay'); if (ov) ov.classList.remove('show'); }, 600);
   } catch(e){
     msg.className = 'nk-msg err'; msg.textContent = (typeof e === 'string') ? e : ('오류: ' + (e.message||e));
@@ -7192,7 +7228,7 @@ window.samuelOpenLeaderboard = async function(){
   }
 };
 
-// ===================== 실시간 암송 대결 =====================
+// ===================== 실시간 암송 게임 =====================
 const Q_TIME = 120000;    // 문제당 기본 제한시간(ms) = 2분
 const REVEAL = 4500;      // 정답 공개 시간(ms)
 const Q_COUNT = 5;        // 기본 문제 수(방장이 변경 가능)
@@ -7213,6 +7249,7 @@ let renderedPhase = '';
 let iAmLeaving = false; // 내가 직접 나가는 경우 "방이 종료되었어요" 알림 표시 안 함
 let roomConnUnsub = null; // .info/connected 구독(모바일 재접속 복구용)
 let lastMyScore = 0;      // 재접속 시 점수 복원용 마지막 점수
+let lastMyCourse = null;  // 재접속 시 과정 복원용
 let gameWasPlaying = false; // playing 진입 감지(전체화면 전환 1회용)
 let gameFsArmed = false;    // 참가자 첫 터치에서 전체화면 예약 여부
 
@@ -7239,14 +7276,31 @@ function normAns(s){ return (s || '').replace(/[\s.,·…"'""''’‘`~!?;:()]/g
 
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function genCode(){ return String(Math.floor(1000 + Math.random() * 9000)); }
-function buildPool(course, days){
+// 한 일차에서 특정 과정에 해당하는 구절들(누적식: c <= course)
+function versesFor(day, course){
   const bd = window.bibleData || {};
   const seen = new Set(), out = [];
-  const dayList = (days && days.length) ? days : Object.keys(bd); // 안 고르면 전체
-  dayList.forEach(day => (bd[day] || []).forEach(it => {
+  (bd[day] || []).forEach(it => {
     if (it.c <= course && it.txt && !seen.has(it.v)){ seen.add(it.v); out.push({ v: it.v, t: it.t, txt: it.txt }); }
-  }));
+  });
   return out;
+}
+// 방 안에서 내 과정(플레이어 노드에 저장된 값 우선, 없으면 프로필 과정)
+function myCourseInRoom(room){
+  const p = room && room.players && currentUser && room.players[currentUser.uid];
+  let c = p && parseInt(p.course, 10);
+  if (![1,2,3,4].includes(c)) c = parseInt(window.myCourse, 10);
+  if (![1,2,3,4].includes(c)) c = 4;
+  return c;
+}
+// 이번 라운드에서 '내 과정·방장이 고른 일차'에 맞는 구절(seed로 결정 → 같은 과정끼리는 동일)
+function myVerseForRound(room){
+  const q = room && room.question; if (!q || q.day == null) return null;
+  let pool = versesFor(q.day, myCourseInRoom(room));
+  if (!pool.length) pool = versesFor(q.day, 4); // 폴백
+  if (!pool.length) return null;
+  const seed = (typeof q.seed === 'number') ? q.seed : 0;
+  return pool[((seed % pool.length) + pool.length) % pool.length];
 }
 function isHost(room){ return room && currentUser && room.host === currentUser.uid; }
 
@@ -7256,7 +7310,7 @@ function ensureGameUI(){
   ov.id = 'gmOverlay'; ov.className = 'sm-overlay';
   ov.innerHTML =
     '<div class="sm-panel">' +
-      '<div class="sm-head"><h2 id="gmTitle">⚔️ 암송 대결</h2><button class="sm-close" id="gmClose">✕</button></div>' +
+      '<div class="sm-head"><h2 id="gmTitle">⚔️ 암송 게임</h2><button class="sm-close" id="gmClose">✕</button></div>' +
       '<div class="sm-body" id="gmBody"></div>' +
     '</div>';
   document.body.appendChild(ov);
@@ -7279,7 +7333,7 @@ async function closeGame(){
 
 window.samuelOpenGame = function(){
   if (!currentUser || currentUser.isAnonymous){
-    alert('암송 대결은 로그인 후 이용할 수 있어요. 먼저 구글 로그인을 해주세요!');
+    alert('암송 게임은 로그인 후 이용할 수 있어요. 먼저 구글 로그인을 해주세요!');
     return;
   }
   if (!myNickname){ openNicknameModal(true); return; }
@@ -7289,7 +7343,7 @@ window.samuelOpenGame = function(){
 };
 
 function renderLobby(){
-  document.getElementById('gmTitle').textContent = '⚔️ 암송 대결';
+  document.getElementById('gmTitle').textContent = '⚔️ 암송 게임';
   gmBody().innerHTML =
     '<p style="text-align:center;color:#8a96a3;margin:4px 0 18px;">방을 만들어 친구를 초대하거나, 방 코드로 참가하세요. (최대 ' + MAX_PLAYERS + '명)</p>' +
     '<button class="g-btn purple" id="gmCreate">방 만들기</button>' +
@@ -7302,7 +7356,7 @@ function renderLobby(){
 }
 
 async function createRoom(){
-  const course = 4; // 전 과정 구절
+  const myC = [1,2,3,4].includes(parseInt(window.myCourse,10)) ? parseInt(window.myCourse,10) : 4;
   let code = genCode();
   try {
     // 코드 중복 회피(몇 번 시도)
@@ -7312,9 +7366,9 @@ async function createRoom(){
       code = genCode();
     }
     await set(ref(db, 'rooms/' + code), {
-      host: currentUser.uid, hostNick: myNickname, state: 'waiting', course: course, qCount: Q_COUNT, qTime: Q_TIME,
+      host: currentUser.uid, hostNick: myNickname, state: 'waiting', qCount: Q_COUNT, qTime: Q_TIME,
       qIndex: -1, createdAt: serverTimestamp(),
-      players: { [currentUser.uid]: { nick: myNickname, score: 0, joinedAt: serverTimestamp() } }
+      players: { [currentUser.uid]: { nick: myNickname, score: 0, course: myC, joinedAt: serverTimestamp() } }
     });
     // 방 전체는 자동 삭제하지 않음(모바일에서 잠깐 홈화면 갔다 와도 방이 유지되도록).
     // 방은 방장이 '나가기/종료'를 직접 누를 때만 삭제됨.
@@ -7332,7 +7386,8 @@ async function joinRoom(code){
     if (room.state !== 'waiting'){ msg.textContent = '이미 게임이 시작된 방이에요.'; return; }
     const cnt = room.players ? Object.keys(room.players).length : 0;
     if (cnt >= MAX_PLAYERS && !(room.players && room.players[currentUser.uid])){ msg.textContent = '방이 가득 찼어요 (최대 ' + MAX_PLAYERS + '명).'; return; }
-    await set(ref(db, 'rooms/' + code + '/players/' + currentUser.uid), { nick: myNickname, score: 0, joinedAt: serverTimestamp() });
+    const myC = [1,2,3,4].includes(parseInt(window.myCourse,10)) ? parseInt(window.myCourse,10) : 4;
+    await set(ref(db, 'rooms/' + code + '/players/' + currentUser.uid), { nick: myNickname, score: 0, course: myC, joinedAt: serverTimestamp() });
     enterRoom(code);
   } catch(e){ msg.textContent = '참가 실패: ' + (e.message||e); }
 }
@@ -7351,7 +7406,8 @@ async function rejoinIfDropped(code){
     const meRef = ref(db, 'rooms/' + code + '/players/' + currentUser.uid);
     const meSnap = await get(meRef);
     if (!meSnap.exists()){
-      await set(meRef, { nick: myNickname, score: lastMyScore || 0, joinedAt: serverTimestamp() });
+      const c = [1,2,3,4].includes(parseInt(lastMyCourse,10)) ? parseInt(lastMyCourse,10) : ([1,2,3,4].includes(parseInt(window.myCourse,10)) ? parseInt(window.myCourse,10) : 4);
+      await set(meRef, { nick: myNickname, score: lastMyScore || 0, course: c, joinedAt: serverTimestamp() });
     }
   } catch(e){}
 }
@@ -7400,7 +7456,7 @@ function cleanupRoomState(){
   if (gameUnsub){ gameUnsub(); gameUnsub = null; }
   if (roomConnUnsub){ try { roomConnUnsub(); } catch(e){} roomConnUnsub = null; }
   clearTimeout(hostTimer); clearInterval(tickTimer);
-  gameCode = null; gameRoom = null; scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1; renderedQ = -1; renderedPhase = ''; iAmLeaving = false; lastMyScore = 0;
+  gameCode = null; gameRoom = null; scheduledQ = -1; myAnsweredQ = -1; earlyQ = -1; renderedQ = -1; renderedPhase = ''; iAmLeaving = false; lastMyScore = 0; lastMyCourse = null;
   gameWasPlaying = false; gameFsArmed = false;
   window.__gameActive = false;
 }
@@ -7418,8 +7474,11 @@ function leaveRoom(){
 function onRoomUpdate(){
   const room = gameRoom;
   if (!room) return;
-  // 재접속 복구를 위해 내 최신 점수 기억
-  if (room.players && currentUser && room.players[currentUser.uid]) lastMyScore = room.players[currentUser.uid].score || 0;
+  // 재접속 복구를 위해 내 최신 점수·과정 기억
+  if (room.players && currentUser && room.players[currentUser.uid]){
+    lastMyScore = room.players[currentUser.uid].score || 0;
+    if ([1,2,3,4].includes(parseInt(room.players[currentUser.uid].course,10))) lastMyCourse = parseInt(room.players[currentUser.uid].course,10);
+  }
   // 게임이 시작되면 화면을 크게(앱처럼) + 실제 전체화면 전환
   const ov = document.getElementById('gmOverlay');
   const panel = ov && ov.querySelector('.sm-panel');
@@ -7447,24 +7506,30 @@ function renderRoom(){
   document.getElementById('gmTitle').textContent = '대기 중';
   const ps = playersArr(room);
   const host = isHost(room);
-  const course = room.course || 4;
   const sel = room.days || [];
   const qCount = room.qCount || Q_COUNT;
   const qtMs = qTimeOf(room);
   const qSec = Math.round(qtMs / 1000);
   const isPresetTime = Q_TIME_PRESETS.includes(qSec);
+  const myC = myCourseInRoom(room);
   const dayKeys = Object.keys(window.bibleData || {});
-  const plist = ps.map(p =>
-    '<div class="g-player' + (p.uid === room.host ? ' host' : '') + '">' + escapeHtml(p.nick) + '</div>'
-  ).join('') + Array.from({ length: MAX_PLAYERS - ps.length }, () => '<div class="g-player" style="opacity:.4;">빈 자리</div>').join('');
+  const plist = ps.map(p => {
+    const pc = [1,2,3,4].includes(parseInt(p.course,10)) ? parseInt(p.course,10) : null;
+    return '<div class="g-player' + (p.uid === room.host ? ' host' : '') + '">' + escapeHtml(p.nick) +
+      (pc ? '<span class="g-p-score">' + pc + '과정</span>' : '') + '</div>';
+  }).join('') + Array.from({ length: MAX_PLAYERS - ps.length }, () => '<div class="g-player" style="opacity:.4;">빈 자리</div>').join('');
 
-  // 출제 범위 설정(방장) / 표시(참가자)
+  // 내 과정 선택(모두) — 과정이 달라도 각자 본인 과정 암송이 나옴
+  const myCourseHtml = '<div class="g-set">' +
+    '<div class="g-set-row"><span>내 과정</span>' +
+      '<select id="gmMyCourse">' + [1,2,3,4].map(c => '<option value="' + c + '"' + (c === myC ? ' selected' : '') + '>' + c + '과정</option>').join('') + '</select>' +
+    '</div>' +
+    '<div class="g-set-hint">방장이 고른 일차에서 내 과정에 맞는 암송이 나와요.</div></div>';
+
+  // 출제 설정(방장: 일차·문제수·제한시간) / 표시(참가자)
   let setHtml;
   if (host){
     setHtml = '<div class="g-set">' +
-      '<div class="g-set-row"><span>과정</span>' +
-        '<select id="gmCourse">' + [1,2,3,4].map(c => '<option value="' + c + '"' + (c === course ? ' selected' : '') + '>' + c + '과정</option>').join('') + '</select>' +
-      '</div>' +
       '<div class="g-set-row"><span>문제 수</span>' +
         '<select id="gmQCount">' + Q_COUNT_OPTS.map(n => '<option value="' + n + '"' + (n === qCount ? ' selected' : '') + '>' + n + '문제</option>').join('') + '</select>' +
       '</div>' +
@@ -7481,13 +7546,14 @@ function renderRoom(){
       '</div>';
   } else {
     const range = sel.length ? sel.join(', ') : '전체 일차 (랜덤)';
-    setHtml = '<div class="g-set"><div class="g-set-label">출제 범위: <b>' + course + '과정 · ' + range + '</b><br>문제 수: <b>' + qCount + '문제</b><br>제한시간: <b>' + fmtQTime(qtMs) + '</b></div></div>';
+    setHtml = '<div class="g-set"><div class="g-set-label">출제 일차: <b>' + range + '</b><br>문제 수: <b>' + qCount + '문제</b><br>제한시간: <b>' + fmtQTime(qtMs) + '</b></div></div>';
   }
 
   gmBody().innerHTML =
     '<div class="g-code-big">' + gameCode + '</div>' +
     '<div class="g-code-label">이 코드를 친구에게 알려주세요</div>' +
     '<div class="g-players">' + plist + '</div>' +
+    myCourseHtml +
     setHtml +
     (host
       ? '<button class="g-btn purple" id="gmStart"' + (ps.length < 2 ? ' disabled' : '') + '>게임 시작 (' + ps.length + '명)</button>' +
@@ -7495,10 +7561,18 @@ function renderRoom(){
       : '<div class="g-msg">방장이 시작하기를 기다리는 중...</div>') +
     '<button class="g-btn ghost" id="gmLeave">나가기</button>';
 
+  // 내 과정 선택 — 모두(방장·참가자) 공통
+  const myCs = document.getElementById('gmMyCourse');
+  if (myCs) myCs.onchange = () => {
+    const c = Number(myCs.value);
+    try { update(ref(db, 'rooms/' + gameCode + '/players/' + currentUser.uid), { course: c }); } catch(e){}
+    try { set(ref(db, 'users/' + currentUser.uid + '/course'), c); } catch(e){}
+    myCourse = c; window.myCourse = c; lastMyCourse = c;
+    try { localStorage.setItem('lastCourse', String(c)); } catch(e){}
+  };
+
   if (host){
     const s = document.getElementById('gmStart'); if (s) s.onclick = startGame;
-    const cs = document.getElementById('gmCourse');
-    if (cs) cs.onchange = () => { try { update(ref(db, 'rooms/' + gameCode), { course: Number(cs.value) }); } catch(e){} };
     const qc = document.getElementById('gmQCount');
     if (qc) qc.onchange = () => { try { update(ref(db, 'rooms/' + gameCode), { qCount: Number(qc.value) }); } catch(e){} };
     const ts = document.getElementById('gmTime');
@@ -7529,19 +7603,21 @@ function renderRoom(){
 
 async function startGame(){
   if (!isHost(gameRoom)) return;
-  const pool = buildPool(gameRoom.course || 4, gameRoom.days);
-  if (pool.length < 1){ alert('선택한 범위에 외울 구절이 없어요. 과정·일차를 다시 골라주세요.'); return; }
-  await genQuestion(gameCode, gameRoom.course || 4, 0, true);
+  const bd = window.bibleData || {};
+  const days = (gameRoom.days && gameRoom.days.length) ? gameRoom.days : Object.keys(bd);
+  const anyVerse = days.some(d => (bd[d] || []).some(it => it.txt));
+  if (!anyVerse){ alert('선택한 일차에 외울 구절이 없어요. 일차를 다시 골라주세요.'); return; }
+  await genQuestion(gameCode, 0, true);
 }
 
-async function genQuestion(code, course, idx, first){
-  const pool = buildPool(course, gameRoom && gameRoom.days);
-  if (!pool.length) return;
-  const ans = pool[Math.floor(Math.random() * pool.length)];
-  const payload = {
-    qIndex: idx,
-    question: { topic: ans.t, ref: ans.v, answer: ans.txt, startedAt: Date.now() }
-  };
+// 방장이 일차만 고르면 됨 — 각자 화면에서 본인 과정에 맞는 구절을 seed로 골라 보여줌
+async function genQuestion(code, idx, first){
+  const bd = window.bibleData || {};
+  const days = (gameRoom && gameRoom.days && gameRoom.days.length) ? gameRoom.days : Object.keys(bd);
+  if (!days.length) return;
+  const day = days[Math.floor(Math.random() * days.length)];
+  const seed = Math.floor(Math.random() * 100000);
+  const payload = { qIndex: idx, question: { day: day, seed: seed, startedAt: Date.now() } };
   if (first) payload.state = 'playing';
   await update(ref(db, 'rooms/' + code), payload);
 }
@@ -7562,22 +7638,34 @@ function updateScoreStrip(room){
 function renderPlaying(){
   const room = gameRoom, q = room.question;
   if (!q) return;
+  const myV = myVerseForRound(room); // 내 과정·일차에 맞는 구절
   const elapsed = Date.now() - q.startedAt;
   const revealing = elapsed >= qTimeOf(room) || allAnswered(room);
   const mine = room.answers && room.answers[room.qIndex] && room.answers[room.qIndex][currentUser.uid];
   const solved = !!(mine && mine.correct);
-  const phase = revealing ? 'reveal' : (solved ? 'solved' : 'input');
+  const phase = (!myV ? 'novers' : (revealing ? 'reveal' : (solved ? 'solved' : 'input')));
 
   // 같은 문제·같은 단계면 입력칸을 다시 그리지 않고 점수만 갱신(타이핑 중 깨짐 방지)
   if (renderedQ === room.qIndex && renderedPhase === phase){ updateScoreStrip(room); return; }
   renderedQ = room.qIndex; renderedPhase = phase;
 
   document.getElementById('gmTitle').textContent = '문제 ' + (room.qIndex + 1) + ' / ' + (room.qCount || Q_COUNT);
-  let html = '<div class="g-qhead"><div class="g-topic">' + escapeHtml(q.topic) + '</div><div class="g-ref">' + escapeHtml(q.ref) + '</div>' +
-    '<div class="g-qno" style="margin-top:4px;">이 장절의 본문을 외워서 적어보세요</div></div>' +
+  const dayLabel = escapeHtml(q.day || '');
+
+  // 내 과정에 이 일차 암송이 없는 경우
+  if (!myV){
+    let h = '<div class="g-qhead"><div class="g-topic">' + dayLabel + '</div>' +
+      '<div class="g-qno" style="margin-top:8px;">이 일차에 해당하는 내 과정 암송이 없어요.<br>다음 문제를 기다려 주세요 🙂</div></div>' +
+      '<div class="g-timebar"><i id="gmBar" style="width:100%"></i></div>';
+    h += '<div class="g-players" id="gmScores" style="margin-top:14px;">' + scoreStripHtml(room) + '</div>';
+    gmBody().innerHTML = h; startTick(); return;
+  }
+
+  let html = '<div class="g-qhead"><div class="g-topic">' + escapeHtml(myV.t) + '</div><div class="g-ref">' + escapeHtml(myV.v) + '</div>' +
+    '<div class="g-qno" style="margin-top:4px;">' + dayLabel + ' · 이 장절의 본문을 외워서 적어보세요</div></div>' +
     '<div class="g-timebar"><i id="gmBar" style="width:100%"></i></div>';
   if (revealing){
-    html += '<div class="g-answer-box">' + escapeHtml(q.answer) + '</div>';
+    html += '<div class="g-answer-box">' + escapeHtml(myV.txt) + '</div>';
     html += solved ? '<div class="g-feedback ok">정답! +' + (mine.pts||0) + '점 🎉</div>' : '<div class="g-feedback no">아쉬워요 😢 (정답은 위에)</div>';
   } else if (solved){
     html += '<div class="g-feedback ok">정답! 다른 사람을 기다리는 중... 🎉 (+' + (mine.pts||0) + '점)</div>';
@@ -7599,11 +7687,23 @@ function renderPlaying(){
 }
 
 function allAnswered(room){
-  const ans = room.answers && room.answers[room.qIndex];
-  if (!ans) return false;
-  const np = Object.keys(room.players || {}).length;
-  let c = 0; Object.keys(ans).forEach(u => { if (ans[u] && ans[u].correct) c++; });
-  return c >= np;
+  const players = room.players || {};
+  const uids = Object.keys(players);
+  if (!uids.length) return false;
+  const ans = (room.answers && room.answers[room.qIndex]) || {};
+  const q = room.question;
+  let done = 0;
+  uids.forEach(u => {
+    const correct = ans[u] && ans[u].correct;
+    // 그 플레이어 과정에 이번 일차 구절이 없으면 자동 완료로 간주(게임 멈춤 방지)
+    let hasVerse = true;
+    if (q && q.day != null){
+      let c = parseInt(players[u].course, 10); if (![1,2,3,4].includes(c)) c = 4;
+      hasVerse = versesFor(q.day, c).length > 0;
+    }
+    if (correct || !hasVerse) done++;
+  });
+  return done >= uids.length;
 }
 
 function startTick(){
@@ -7622,11 +7722,12 @@ function startTick(){
 async function trySubmit(){
   const room = gameRoom; if (!room || !room.question) return;
   if (myAnsweredQ === room.qIndex) return;
+  const myV = myVerseForRound(room); if (!myV) return;
   const inp = document.getElementById('gmInput');
   const val = inp ? inp.value : '';
   if (!normAns(val)) return;
   const fb = document.getElementById('gmFb');
-  if (normAns(val) !== normAns(room.question.answer)){
+  if (normAns(val) !== normAns(myV.txt)){
     if (fb){ fb.className = 'g-feedback no'; fb.textContent = '틀렸어요. 다시 도전! (띄어쓰기는 무시돼요)'; }
     return;
   }
@@ -7646,7 +7747,7 @@ async function trySubmit(){
 function hostAdvance(room){
   const next = room.qIndex + 1;
   if (next >= (room.qCount || Q_COUNT)) update(ref(db, 'rooms/' + gameCode), { state: 'finished' });
-  else genQuestion(gameCode, room.course, next);
+  else genQuestion(gameCode, next);
 }
 function hostSchedule(){
   const room = gameRoom;
