@@ -220,20 +220,13 @@
     [data-theme="dark"] .menu-row-desc { color: #93a0b0; }
     [data-theme="dark"] .menu-row-arrow { color: #5b6675; }
 
-    /* [신규] 홈 - 나의 진도 + 공지사항 2단 배치 */
-    .home-bottom-row { display: grid; grid-template-columns: minmax(0, 4.5fr) minmax(0, 7.5fr); gap: 16px; align-items: start; margin-top: 24px; }
+    /* [신규] 홈 - 나의 진도 + 공지사항 2단 배치 (동일 크기) */
+    .home-bottom-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; margin-top: 24px; }
     .home-bottom-row > .home-progress, .home-bottom-row > .home-notice { margin-top: 0; }
     @media (max-width: 760px) { .home-bottom-row { grid-template-columns: 1fr; } }
-    /* 좁은 좌측 칸에 맞춰 나의 진도 컴팩트화 */
-    .home-bottom-row > .home-progress .hp-head .hp-title { font-size: 0.98em; }
-    .home-bottom-row > .home-progress .hp-overall { font-size: 0.84em; margin-bottom: 11px; }
-    .home-bottom-row > .home-progress .hp-row { gap: 7px; margin-bottom: 7px; }
-    .home-bottom-row > .home-progress .hp-day { flex: 0 0 42px; font-size: 0.82em; }
-    .home-bottom-row > .home-progress .hp-bar { height: 8px; }
-    .home-bottom-row > .home-progress .hp-num { flex: 0 0 72px; font-size: 0.76em; }
 
     /* [신규] 홈 - 나의 진도 패널 */
-    .home-progress { margin-top: 28px; background: #fff; border: 1px solid #eef1f5; border-radius: 18px; padding: 15px 15px 11px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
+    .home-progress { margin-top: 28px; background: #fff; border: 1px solid #eef1f5; border-radius: 18px; padding: 18px 18px 14px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
     .hp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
     .hp-head .hp-title { font-weight: 800; color: var(--secondary); font-size: 1.05em; }
     .hp-head select { width: auto; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-size: 0.85em; font-weight: 700; }
@@ -1385,6 +1378,36 @@
     .hm-legend { display: flex; align-items: center; gap: 6px; justify-content: flex-end; margin-top: 10px; font-size: 0.75em; color: #9aa6b2; }
     .hm-legend .hm-cell { width: 12px; height: 12px; }
 
+    /* 수료 점수 계산기 */
+    .exam-card { background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
+    .exam-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+    .exam-head h3 { margin: 0; font-size: 1.12em; font-weight: 800; color: var(--secondary); }
+    .exam-head select { padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-weight: 700; font-size: 0.85em; }
+    .exam-desc { font-size: 0.82em; color: #7c8794; margin-bottom: 14px; line-height: 1.5; }
+    .exam-rows { display: flex; flex-direction: column; gap: 8px; }
+    .ex-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 13px; background: #f7f9fc; border-radius: 10px; }
+    .ex-info { display: flex; flex-direction: column; min-width: 0; }
+    .ex-name { font-weight: 700; color: #33404f; font-size: 0.92em; }
+    .ex-sub { font-size: 0.74em; color: #9aa6b3; margin-top: 1px; }
+    .ex-input { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+    .ex-input input { width: 62px; padding: 7px 8px; border: 1.5px solid #e1e6ec; border-radius: 8px; text-align: right; font-weight: 700; font-size: 0.95em; -moz-appearance: textfield; }
+    .ex-input input::-webkit-outer-spin-button, .ex-input input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .ex-max { font-size: 0.8em; color: #9aa6b3; font-weight: 600; }
+    .exam-result { margin-top: 16px; }
+    .ex-bar { height: 12px; background: #eef1f5; border-radius: 7px; overflow: hidden; margin-bottom: 12px; }
+    .ex-fill { height: 100%; border-radius: 7px; background: linear-gradient(90deg, #f7b733, #fc4a1a); transition: width 0.5s ease; }
+    .ex-need { font-size: 1.08em; font-weight: 800; color: var(--secondary); text-align: center; }
+    .ex-need b { color: #e8590c; font-size: 1.2em; }
+    .ex-pass { font-size: 1.05em; font-weight: 800; color: #27ae60; text-align: center; }
+    .ex-pass + .ex-sub2 b, .ex-sub2 b { color: var(--primary); }
+    .ex-sub2 { text-align: center; font-size: 0.8em; color: #9aa6b3; margin-top: 5px; }
+    [data-theme="dark"] .exam-card { background: #1b212b; border-color: #2a323e; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+    [data-theme="dark"] .exam-head h3, [data-theme="dark"] .ex-need { color: #eef2f7; }
+    [data-theme="dark"] .exam-head select, [data-theme="dark"] .ex-input input { background: #232b36; color: #eef2f7; border-color: #3a4452; }
+    [data-theme="dark"] .ex-row { background: #232b36; }
+    [data-theme="dark"] .ex-name { color: #e6ebf1; }
+    [data-theme="dark"] .ex-bar { background: #2a323e; }
+
     [data-theme="dark"] .gauge-card, [data-theme="dark"] .streak-card, [data-theme="dark"] .stat-card, [data-theme="dark"] .heatmap-card { background: #1b212b; border-color: #2a323e; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
     [data-theme="dark"] .stats-head h2, [data-theme="dark"] .stat-value, [data-theme="dark"] .gauge-center, [data-theme="dark"] .heatmap-card h3 { color: #eef2f7; }
     [data-theme="dark"] .gauge-center { fill: #eef2f7; }
@@ -1627,8 +1650,8 @@
                             <span class="menu-row-arrow">›</span>
                         </button>
                         <button class="menu-row stats" onclick="selectRootMode('stats')">
-                            <span class="menu-row-ico">🏆</span>
-                            <span class="menu-row-text"><span class="menu-row-title">나의 기록</span><span class="menu-row-desc">누적 학습량·연속일수·잔디로 보는 나의 노력</span></span>
+                            <span class="menu-row-ico">🙋</span>
+                            <span class="menu-row-text"><span class="menu-row-title">마이페이지</span><span class="menu-row-desc">수료 점수 계산기·학습 기록·잔디로 보는 나의 노력</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                         <button class="menu-row rank" onclick="samuelOpenLeaderboard()">
@@ -1672,7 +1695,7 @@
                 </div>
                 <div id="stepStats" class="no-print">
                     <div class="stats-head">
-                        <h2>🏆 나의 기록</h2>
+                        <h2>🙋 마이페이지</h2>
                         <button class="stats-back" onclick="showStep('stepHome')">‹ 홈</button>
                     </div>
                     <div id="statsContent"></div>
@@ -2689,6 +2712,91 @@ async function resetProgress() {
     renderHomeProgress();
 }
 
+// [신규] 수료 점수 계산기(마이페이지) ----------------------------------
+const EXAM_KEY = 'samuel_exam';
+// 학사 안내(총 1000점) 구성 — 입학과제200 + 일일시험600(월200·화200·수100·목100) + 조별활동200
+const EXAM_ITEMS = [
+    { k: 'entrance', label: '입학과제', sub: '각오문·밭갈이·대본 등 제출', max: 200 },
+    { k: 'mon', label: '월요일 일일시험', sub: '5·6일차 암송 및 대본', max: 200 },
+    { k: 'tue', label: '화요일 일일시험', sub: '1·2일차 암송 및 대본', max: 200 },
+    { k: 'wed', label: '수요일 일일시험', sub: '3일차 암송 및 대본', max: 100 },
+    { k: 'thu', label: '목요일 일일시험', sub: '4일차 암송 및 대본', max: 100 },
+    { k: 'group', label: '조별활동', sub: '발표', max: 200 }
+];
+// 과정별 수료 점수(사용자 제공): 1·2과정 700, 3·4과정 800
+const PASS_SCORE = { 1: 700, 2: 700, 3: 800, 4: 800 };
+const EXAM_TOTAL = EXAM_ITEMS.reduce((a, it) => a + it.max, 0); // 1000
+
+function getExamData() {
+    let d; try { d = JSON.parse(localStorage.getItem(EXAM_KEY)); } catch (e) {}
+    if (!d || typeof d !== 'object') d = {};
+    const src = (d.scores && typeof d.scores === 'object') ? d.scores : {};
+    const scores = {};
+    EXAM_ITEMS.forEach(it => { const v = src[it.k]; scores[it.k] = (v === 0 || (typeof v === 'number' && !isNaN(v))) ? v : ''; });
+    let course = parseInt(d.course, 10);
+    if (![1, 2, 3, 4].includes(course)) course = parseInt(localStorage.getItem('lastCourse'), 10);
+    if (![1, 2, 3, 4].includes(course)) course = 1;
+    return { course, scores };
+}
+function saveExamData(d) { try { localStorage.setItem(EXAM_KEY, JSON.stringify(d)); } catch (e) {} }
+
+function renderExamCalc() {
+    const d = getExamData();
+    const rows = EXAM_ITEMS.map(it => `
+        <div class="ex-row">
+            <div class="ex-info"><span class="ex-name">${it.label}</span><span class="ex-sub">${it.sub}</span></div>
+            <div class="ex-input">
+                <input type="number" id="ex-${it.k}" min="0" max="${it.max}" inputmode="numeric"
+                    value="${d.scores[it.k] === '' ? '' : d.scores[it.k]}" placeholder="–" oninput="recalcExam()">
+                <span class="ex-max">/ ${it.max}</span>
+            </div>
+        </div>`).join('');
+    const courseOpts = [1, 2, 3, 4].map(c => `<option value="${c}" ${d.course === c ? 'selected' : ''}>${c}과정 · 수료 ${PASS_SCORE[c]}점</option>`).join('');
+    return `
+        <div class="exam-card">
+            <div class="exam-head">
+                <h3>🎓 수료 점수 계산기</h3>
+                <select id="examCourseSel" onchange="recalcExam()">${courseOpts}</select>
+            </div>
+            <div class="exam-desc">시험 점수가 공개되면 항목별로 받은 점수를 입력하세요. 수료까지 몇 점이 남았는지 알려드려요. (총 ${EXAM_TOTAL}점 만점)</div>
+            <div class="exam-rows">${rows}</div>
+            <div id="examResult" class="exam-result"></div>
+        </div>`;
+}
+
+function recalcExam() {
+    const sel = document.getElementById('examCourseSel');
+    if (!sel) return;
+    const course = parseInt(sel.value, 10) || 1;
+    const scores = {};
+    let total = 0, enteredMax = 0;
+    EXAM_ITEMS.forEach(it => {
+        const el = document.getElementById('ex-' + it.k);
+        if (!el || el.value === '') { scores[it.k] = ''; return; }
+        let v = parseInt(el.value, 10);
+        if (isNaN(v)) { scores[it.k] = ''; return; }
+        v = Math.max(0, Math.min(it.max, v));
+        if (String(v) !== el.value) el.value = v; // 범위 벗어난 입력 보정
+        scores[it.k] = v; total += v; enteredMax += it.max;
+    });
+    saveExamData({ course, scores });
+    const pass = PASS_SCORE[course];
+    const need = Math.max(0, pass - total);
+    const pct = Math.min(100, Math.round(total / pass * 100));
+    const remainPossible = EXAM_TOTAL - enteredMax; // 아직 입력 안 한 항목에서 더 받을 수 있는 최대
+    let msg;
+    if (total >= pass) {
+        msg = `<div class="ex-pass">🎉 수료 점수(${pass}점)를 넘었어요!</div>
+            <div class="ex-sub2">현재 <b>${total}점</b> · 수료 기준 ${pass}점</div>`;
+    } else {
+        const feasible = need <= remainPossible;
+        msg = `<div class="ex-need">수료까지 <b>${need}점</b> 더 필요해요</div>
+            <div class="ex-sub2">현재 ${total}점 · 수료 기준 ${pass}점${feasible ? '' : ' · ⚠️ 남은 항목만으로는 부족할 수 있어요'}</div>`;
+    }
+    const r = document.getElementById('examResult');
+    if (r) r.innerHTML = `<div class="ex-bar"><div class="ex-fill" style="width:${pct}%"></div></div>${msg}`;
+}
+
 // [신규] 누적 활동 통계(나의 기록) ----------------------------------
 const STATS_KEY = 'samuel_stats';
 function getStats() {
@@ -2829,7 +2937,8 @@ function renderStats() {
             <div class="hm-legend">적음 <span class="hm-cell lvl-0"></span><span class="hm-cell lvl-1"></span><span class="hm-cell lvl-2"></span><span class="hm-cell lvl-3"></span> 많음</div>
         </div>`;
 
-    box.innerHTML = `<div class="stats-hero">${gauge}${streakCard}</div>${cards}${heatmap}`;
+    box.innerHTML = `<div class="stats-hero">${gauge}${streakCard}</div>${renderExamCalc()}${cards}${heatmap}`;
+    recalcExam();
 }
 
 // [신규] 구절 검색 ----------------------------------------
