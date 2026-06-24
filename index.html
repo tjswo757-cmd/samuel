@@ -6992,6 +6992,7 @@ function setupPresence(uid){
 
 // 집계 기준: 이 시간 안에 살아있다는 신호(하트비트)가 있어야 접속으로 셈. 하트비트보다 넉넉하게.
 const PRESENCE_WINDOW = 60000; // 60초
+const PRUNE_AGE = 120000;      // 2분 넘게 신호 없는(또는 시간값 없는) 항목은 DB에서 자동 삭제
 let countSubscribed = false;
 let lastStatusEntries = [];    // 마지막으로 받은 status 목록(시간 경과 재계산용)
 let gotStatus = false;         // 첫 데이터 받기 전엔 '–' 유지
@@ -7008,11 +7009,19 @@ function subscribeCount(){
   if (countSubscribed) return;
   countSubscribed = true;
   onValue(ref(db, 'status'), (snap) => {
-    const arr = [];
-    snap.forEach((child) => { const v = child.val() || {}; arr.push({ ts: v.ts }); });
+    const now = Date.now();
+    const arr = [], stale = [];
+    snap.forEach((child) => {
+      const v = child.val() || {};
+      arr.push({ ts: v.ts });
+      // 시간값 없거나 2분 넘게 신호 없는 = 죽은 표식(유령) → 정리 대상
+      if (typeof v.ts !== 'number' || (now - v.ts) > PRUNE_AGE) stale.push(child.key);
+    });
     lastStatusEntries = arr;
     gotStatus = true;
     renderCount(); // 누가 들어오거나 나가면(데이터 변화) 즉시 반영 — 실시간
+    // 죽은 표식 자동 청소(규칙이 오래된 항목 삭제를 허용). 내 것은 건드리지 않음.
+    stale.forEach((k) => { if (k !== presenceUid) { try { remove(ref(db, 'status/' + k)); } catch(e){} } });
   }, (err) => {
     // 아직 인증 전이라 읽기가 거부되면 리스너가 취소됨 → 잠시 뒤 재구독
     countSubscribed = false;
