@@ -2995,7 +2995,6 @@ function renderStats() {
             <div class="stat-card"><div class="stat-ico">⌨️</div><div class="stat-value">${fmtNum(s.typedChars)}</div><div class="stat-name">누적 타이핑 글자</div><div class="stat-extra">${charLine}</div></div>
             <div class="stat-card"><div class="stat-ico">✅</div><div class="stat-value">${fmtNum(s.correct)}</div><div class="stat-name">누적 정답 구절</div><div class="stat-extra">맞힌 횟수</div></div>
             <div class="stat-card"><div class="stat-ico">📝</div><div class="stat-value">${fmtNum(s.attempts)}</div><div class="stat-name">누적 퀴즈 도전</div><div class="stat-extra">채점 ${fmtNum(s.attempts)}회</div></div>
-            <div class="stat-card"><div class="stat-ico">✍️</div><div class="stat-value">${fmtNum(s.strokes)}</div><div class="stat-name">누적 필기 획</div><div class="stat-extra">손으로 적은 흔적</div></div>
         </div>`;
 
     const mpNick = window.myNickname;
@@ -3527,11 +3526,10 @@ function openPlowingDetail(index) {
     window.__plowingRef = item.id || ('idx_' + index);
     logStudyVisit(); // [신규] 활동일 기록(잔디/연속일수)
 
-    document.getElementById('globalHeader').classList.add('header-hidden');
-    document.querySelector('.app-footer').classList.add('footer-hidden'); 
+    // [변경] 별도 상단 배너/닫기 버튼 없이 전역 헤더·푸터를 그대로 둔 채 본문만 표시
     const scrollContent = document.getElementById('scrollContent');
-    scrollContent.classList.add('full-width'); 
-    scrollContent.style.display = 'block'; 
+    scrollContent.classList.add('full-width');
+    scrollContent.style.display = 'block';
     document.querySelectorAll('.main-container .container').forEach(div => div.style.display = 'none');
 
     const tempDiv = document.createElement('div');
@@ -3545,41 +3543,20 @@ function openPlowingDetail(index) {
         }
     });
 
-    let navHtml = `<button class="study-nav-btn" onclick="goBack()" style="font-size:1.2rem; font-weight:bold; margin-right:10px;">✖ 닫기</button>`;
+    // 커스텀 항목은 하단 플로팅 '수정' 버튼만 제공(상단 배너 제거)
+    let navBtns = '';
     if (item.id && item.id.startsWith('custom_')) {
-        navHtml = `<button class="study-nav-btn" style="font-size:1rem; font-weight:bold; color:var(--primary); margin-right:15px;" onclick="openPlowingEditor(${index})">수정</button>` + navHtml;
+        navBtns = `<div class="study-floating-nav no-print"><button class="float-btn" onclick="openPlowingEditor(${index})">✎ 수정</button></div>`;
     }
 
     let html = `
-        <div class="study-integrated-header" style="border-bottom: 3px solid var(--plowing-color);">
-            <div class="header-top-row">
-                <div class="top-nav-placeholder"></div>
-                <div class="study-center-title mobile-title" onclick="goHome()">
-                    <span class="study-center-small">전도를 위한 대학생 성경연구</span>
-                    <span class="study-center-main">제 ${currentSession}기 사무엘학교</span>
-                </div>
-                <div class="top-nav-placeholder"></div>
-            </div>
-            
-            <div class="header-bottom-row">
-                <div class="study-day-title" style="color: var(--plowing-color);">
-                    🌱 예시 밭갈이
-                </div>
-                <div class="study-center-title pc-show" onclick="goHome()">
-                    <span class="study-center-small">전도를 위한 대학생 성경연구</span>
-                    <span class="study-center-main">제 ${currentSession}기 사무엘학교</span>
-                </div>
-                <div class="study-nav-controls">${navHtml}</div>
-            </div>
-        </div>
-        
         <div id="studyScrollWrapper" style="background:white;">
             <div class="plowing-content-container">
                 ${tempDiv.innerHTML}
             </div>
             <canvas id="drawingCanvas"></canvas>
         </div>
-    `;
+    ` + navBtns;
 
     document.getElementById('plowingDetailContent').innerHTML = html;
     document.getElementById('stepPlowingDetail').style.display = 'block';
