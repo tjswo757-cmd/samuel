@@ -664,6 +664,12 @@
     .ft-wrong { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: var(--error); cursor: pointer; padding: 0 8px; -webkit-user-select: none; user-select: none; white-space: nowrap; }
     .ft-wrong input { width: 14px; height: 14px; accent-color: var(--error); margin: 0; }
     .flex-toolbar.plowing-mode .ft-wrong { display: none; }
+    /* 최소화: 드래그 핸들과 최소화 버튼만 남기고 나머지 도구 숨김 */
+    .ft-min { color: #b8c0c9; }
+    .ft-min .ft-min-expand { display: none; }
+    .flex-toolbar.minimized > *:not(.ft-handle):not(.ft-min) { display: none !important; }
+    .flex-toolbar.minimized .ft-min .ft-min-collapse { display: none; }
+    .flex-toolbar.minimized .ft-min .ft-min-expand { display: block; }
     [data-theme="dark"] .flex-toolbar { background: #1b212b; border-color: #2f3947; }
     [data-theme="dark"] .ft-sep { background: #2f3947; }
     [data-theme="dark"] .ft-handle { color: #5b6675; }
@@ -1538,12 +1544,13 @@
         <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor"><circle cx="4" cy="4" r="1.6"/><circle cx="10" cy="4" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="4" cy="16" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>
     </div>
 
-    <button class="flex-tool-btn ft-orient" onclick="toggleToolbarOrientation()" title="가로/세로 전환">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/></svg>
+    <button id="ftMinBtn" class="flex-tool-btn ft-min" onclick="toggleToolbarMinimized()" title="툴바 최소화">
+        <svg class="ft-min-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+        <svg class="ft-min-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/></svg>
     </button>
 
-    <button id="toolBtn-pan" class="flex-tool-btn" onclick="selectTool('pan')" title="이동/스크롤">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+    <button class="flex-tool-btn ft-orient" onclick="toggleToolbarOrientation()" title="가로/세로 전환">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/></svg>
     </button>
 
     <div class="ft-sep"></div>
@@ -4292,6 +4299,10 @@ function applySavedToolbarPos() {
     const tb = document.getElementById('flexToolbar');
     if (!tb) return;
     tb.classList.toggle('vertical', localStorage.getItem('toolbarVertical') === '1'); // 가로/세로 복원
+    const min = localStorage.getItem('toolbarMinimized') === '1';
+    tb.classList.toggle('minimized', min); // 최소화 상태 복원
+    const minBtn = document.getElementById('ftMinBtn');
+    if (minBtn) minBtn.title = min ? '툴바 펼치기' : '툴바 최소화';
     let p = null; try { p = JSON.parse(localStorage.getItem(TOOLBAR_POS_KEY)); } catch (e) {}
     if (p && typeof p.left === 'number') {
         tb.style.bottom = 'auto'; tb.style.right = 'auto';
@@ -4307,6 +4318,17 @@ function toggleToolbarOrientation() {
     const vert = tb.classList.toggle('vertical');
     try { localStorage.setItem('toolbarVertical', vert ? '1' : '0'); } catch (e) {}
     // 레이아웃이 바뀐 뒤(폭/높이 변경) 화면 밖으로 나가지 않게 보정하고 저장
+    requestAnimationFrame(() => { clampToolbarPos(); saveToolbarPos(); });
+}
+function toggleToolbarMinimized() {
+    const tb = document.getElementById('flexToolbar');
+    if (!tb) return;
+    pinToolbarToInline();
+    const min = tb.classList.toggle('minimized');
+    const btn = document.getElementById('ftMinBtn');
+    if (btn) btn.title = min ? '툴바 펼치기' : '툴바 최소화';
+    try { localStorage.setItem('toolbarMinimized', min ? '1' : '0'); } catch (e) {}
+    // 폭/높이가 줄어든 만큼 화면 안으로 다시 붙임
     requestAnimationFrame(() => { clampToolbarPos(); saveToolbarPos(); });
 }
 (function setupToolbarDrag() {
@@ -6986,7 +7008,7 @@ window.smAlert = smAlert; window.smConfirm = smConfirm;
 window.alert = smAlert; // 모든 기본 alert을 앱 스타일로 교체
 
 // 기기마다 달라야 하는(동기화 제외) 키
-const DEVICE_KEYS = new Set(['theme','autoFullscreen','fingerDraw','toolbarVertical','toolbarPos','sidebar_layout','studyZoom']);
+const DEVICE_KEYS = new Set(['theme','autoFullscreen','fingerDraw','toolbarVertical','toolbarMinimized','toolbarPos','sidebar_layout','studyZoom']);
 
 let currentUser = null;
 let applyingRemote = false;
