@@ -3167,31 +3167,18 @@ function renderNotices(items) {
     if (!list) return;
     if (!items.length) { list.innerHTML = '<div class="hn-empty">등록된 공지가 없어요.</div>'; return; }
     const top = items.slice(0, 6);
+    const BOARD_URL = 'https://www.jbch.org/ko/ksm/fellowship/list.php?flag=3&chId=14&use_kind=1&boardId=5373&page=1&cId=629';
     list.innerHTML = top.map((it, i) => {
         const date = formatNoticeDate(it.date);
-        const body = decodeEntities(it.description || '').trim();
-        // jbch.org 글 상세 페이지는 로그인이 필요해 외부 링크가 빈 화면으로 뜸 →
-        // 외부 '원문 보기' 버튼은 제거하고, 본문 속 실제 링크(신청 사이트·구글폼 등)를 클릭 가능하게 만든다.
-        return '<div class="hn-item" id="hn-' + i + '">' +
-            '<div class="hn-item-head" onclick="toggleNotice(' + i + ')">' +
-                (i === 0 ? '<span class="hn-badge">최신</span>' : '') +
-                '<span class="hn-item-title">' + escHtml(decodeEntities(it.title)) + '</span>' +
-                '<span class="hn-item-date">' + date + '</span>' +
-                '<span class="hn-arrow">›</span>' +
-            '</div>' +
-            '<div class="hn-item-body">' + (body ? linkifyNotice(escHtml(body)) : '<i>내용 없음</i>') + '</div>' +
-        '</div>';
+        // 글을 누르면 해당 글의 교회 홈페이지 주소로 이동(새 탭). 링크 없으면 게시판으로.
+        const href = it.link ? it.link : BOARD_URL;
+        return '<a class="hn-item hn-item-head" href="' + escAttr(href) + '" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">' +
+            (i === 0 ? '<span class="hn-badge">최신</span>' : '') +
+            '<span class="hn-item-title">' + escHtml(decodeEntities(it.title)) + '</span>' +
+            '<span class="hn-item-date">' + date + '</span>' +
+            '<span class="hn-arrow">›</span>' +
+        '</a>';
     }).join('');
-    // 처음에는 모든 공지를 접어 둠(첫 글도 닫힘)
-}
-
-function toggleNotice(i) {
-    const el = document.getElementById('hn-' + i);
-    if (!el) return;
-    const willOpen = !el.classList.contains('open');
-    // 아코디언: 다른 공지를 열면 이전에 열려 있던 공지는 자동으로 닫힘
-    document.querySelectorAll('#hnList .hn-item.open').forEach(it => { if (it !== el) it.classList.remove('open'); });
-    el.classList.toggle('open', willOpen);
 }
 
 function formatNoticeDate(s) {
@@ -3203,16 +3190,6 @@ function formatNoticeDate(s) {
 
 function escHtml(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-// 이미 escHtml 처리된 공지 본문에서 http(s) URL을 찾아 클릭 가능한 링크로 변환
-function linkifyNotice(s) {
-    return String(s == null ? '' : s).replace(/https?:\/\/[^\s<]+/g, function (u) {
-        // URL 끝에 붙은 문장부호(. , ) 등)는 링크에서 제외
-        let tail = '';
-        const m = u.match(/[)\]\.,!?:;]+$/);
-        if (m) { tail = u.slice(u.length - m[0].length); u = u.slice(0, u.length - m[0].length); }
-        return '<a href="' + u + '" target="_blank" rel="noopener" style="color:var(--primary); text-decoration:underline; word-break:break-all;">' + u + '</a>' + tail;
-    });
 }
 function escAttr(s) {
     return escHtml(s).replace(/"/g, '&quot;');
