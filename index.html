@@ -1400,6 +1400,31 @@
 
     .stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
     @media (max-width: 620px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+
+    /* [신규] 마이페이지 학습 분석 (나의 진도 + 일차별 최다 오답) */
+    .mp-analytics { background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 16px 16px 14px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(15,30,60,0.05); }
+    .mp-an-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .mp-an-title { font-weight: 800; color: var(--secondary); font-size: 1.08em; }
+    .mp-an-course { padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-weight: 700; font-size: 0.85em; cursor: pointer; }
+    .mp-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0f0f0; }
+    .mp-block:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    .mp-block-title { font-weight: 700; color: var(--secondary); font-size: 0.98em; margin-bottom: 10px; }
+    .mp-block-note { font-size: 0.78em; color: #9aa6b3; margin-top: 10px; line-height: 1.5; }
+    .wv-day { margin-bottom: 12px; }
+    .wv-day-name { font-weight: 700; color: var(--primary); font-size: 0.86em; margin-bottom: 5px; }
+    .wv-row { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border: 1px solid #eef1f5; border-radius: 9px; margin-bottom: 5px; }
+    .wv-rank { flex: 0 0 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: #eef3fb; color: var(--primary); font-weight: 800; font-size: 0.72em; }
+    .wv-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .wv-ref { font-weight: 700; color: #33404f; font-size: 0.9em; }
+    .wv-topic { font-size: 0.74em; color: #9aa6b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wv-cnt { flex: 0 0 auto; font-weight: 800; color: var(--error); font-size: 0.82em; }
+    [data-theme="dark"] .mp-analytics { background: #1b212b; border-color: #2a323e; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+    [data-theme="dark"] .mp-an-title, [data-theme="dark"] .mp-block-title { color: #eef2f7; }
+    [data-theme="dark"] .mp-an-course { background: #232b36; color: #eef2f7; border-color: #3a4452; }
+    [data-theme="dark"] .mp-block { border-top-color: #2a323e; }
+    [data-theme="dark"] .wv-row { border-color: #2a323e; }
+    [data-theme="dark"] .wv-ref { color: #dfe6ee; }
+    [data-theme="dark"] .wv-rank { background: #14304a; }
     .stat-card {
         background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 16px 14px;
         box-shadow: 0 6px 18px rgba(15,30,60,0.06); text-align: center;
@@ -2774,6 +2799,11 @@ function recordProgress() {
     quizList.forEach((item, i) => {
         if (results[i] && results[i].isOk) { entry.mem[item.v] = true; correct++; }
     });
+    // [신규] 오답 구절 카운트 — 일차별 '가장 많이 틀린 구절' 분석용 (지금부터 누적)
+    entry.wrong = entry.wrong || {};
+    quizList.forEach((item, i) => {
+        if (results[i] && !results[i].isOk) entry.wrong[item.v] = (entry.wrong[item.v] || 0) + 1;
+    });
     const rate = quizList.length ? Math.round(correct / quizList.length * 100) : 0;
     entry.best = Math.max(entry.best || 0, rate);
     entry.tries = (entry.tries || 0) + 1;
@@ -3059,8 +3089,78 @@ function renderStats() {
     const profileHtml = mpNick
         ? `<div class="mypage-profile"><span class="mp-nick">${escHtml(mpNick)}</span>${mpCourse ? `<span class="mp-course">${mpCourse}</span>` : ''}</div>`
         : '';
-    box.innerHTML = `${profileHtml}<div class="stats-hero">${gauge}${streakCard}</div>${renderExamCalc()}${cards}`;
+    box.innerHTML = `${profileHtml}<div class="stats-hero">${gauge}${streakCard}</div>${buildMpAnalytics()}${renderExamCalc()}${cards}`;
     recalcExam();
+}
+
+// ===== [신규] 마이페이지 학습 분석: 나의 진도 + 일차별 최다 오답 구절 =====
+let _mpCourse = null;
+function currentMpCourse() {
+    if ([1, 2, 3, 4].includes(_mpCourse)) return _mpCourse;
+    let c = parseInt(window.myCourse, 10);
+    if (![1, 2, 3, 4].includes(c)) c = parseInt(localStorage.getItem('lastCourse'), 10);
+    if (![1, 2, 3, 4].includes(c)) c = 1;
+    return c;
+}
+function changeMpCourse(c) {
+    _mpCourse = Number(c);
+    const el = document.getElementById('mpAnalyticsBody');
+    if (el) el.innerHTML = buildMpAnalyticsBody(_mpCourse);
+}
+function buildMpAnalytics() {
+    const c = currentMpCourse();
+    const opts = [1, 2, 3, 4].map(n => `<option value="${n}" ${n === c ? 'selected' : ''}>${n}과정</option>`).join('');
+    return `<div class="mp-analytics">
+        <div class="mp-an-head">
+            <span class="mp-an-title">학습 분석</span>
+            <select class="mp-an-course" onchange="changeMpCourse(this.value)">${opts}</select>
+        </div>
+        <div id="mpAnalyticsBody">${buildMpAnalyticsBody(c)}</div>
+    </div>`;
+}
+function buildMpAnalyticsBody(c) {
+    return mpProgressBlock(c) + mpWrongBlock(c);
+}
+function mpProgressBlock(c) {
+    const data = loadProgress()['c' + c] || {};
+    let rows = '', totMem = 0, totAll = 0, anyTry = false, latest = '';
+    Object.keys(bibleData).forEach(day => {
+        const verses = bibleData[day].filter(i => i.c <= c);
+        const total = verses.length;
+        const entry = data[day] || {};
+        const memSet = entry.mem || {};
+        const mem = verses.filter(i => memSet[i.v]).length;
+        if (entry.tries) anyTry = true;
+        if (entry.last && entry.last > latest) latest = entry.last;
+        totMem += mem; totAll += total;
+        const rate = total ? Math.round(mem / total * 100) : 0;
+        rows += `<div class="hp-row"><div class="hp-day">${day}</div><div class="hp-bar"><div class="hp-fill" style="width:${rate}%"></div></div><div class="hp-num">${mem}/${total} <small>(${rate}%)</small></div></div>`;
+    });
+    const overall = totAll ? Math.round(totMem / totAll * 100) : 0;
+    const head = anyTry
+        ? `전체 암송률 <b>${overall}%</b> <small>(${totMem}/${totAll}구절)</small>${latest ? ` · 마지막 <b style="color:#5b6675;font-weight:700;">${latest}</b>` : ''}`
+        : `<span class="hp-empty">아직 기록이 없어요. 암송 퀴즈를 풀면 진도가 쌓입니다.</span>`;
+    return `<div class="mp-block"><div class="mp-block-title">나의 진도</div><div class="hp-overall">${head}</div>${anyTry ? rows : ''}</div>`;
+}
+function mpWrongBlock(c) {
+    const data = loadProgress()['c' + c] || {};
+    let blocks = '', any = false, totalWrong = 0;
+    Object.keys(bibleData).forEach(day => {
+        const entry = data[day] || {};
+        const wrong = entry.wrong || {};
+        const arr = Object.keys(wrong).map(v => ({ v, n: wrong[v] })).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
+        if (!arr.length) return;
+        any = true;
+        const top = arr.slice(0, 3).map((x, i) => {
+            const item = (bibleData[day] || []).find(it => it.v === x.v);
+            const topic = item ? item.t : '';
+            totalWrong += 0;
+            return `<div class="wv-row"><span class="wv-rank">${i + 1}</span><span class="wv-main"><span class="wv-ref">${escHtml(x.v)}</span>${topic ? `<span class="wv-topic">${escHtml(topic)}</span>` : ''}</span><span class="wv-cnt">${x.n}회</span></div>`;
+        }).join('');
+        blocks += `<div class="wv-day"><div class="wv-day-name">${day}</div>${top}</div>`;
+    });
+    const note = `<div class="mp-block-note">틀린 구절은 퀴즈를 풀 때마다 누적됩니다. 자주 틀리는 구절을 집중 복습해 보세요.</div>`;
+    return `<div class="mp-block"><div class="mp-block-title">일차별 최다 오답 구절</div>${any ? blocks + note : '<div class="hp-empty">아직 오답 데이터가 없어요. 암송 퀴즈를 풀면 틀린 구절이 기록됩니다.</div>'}</div>`;
 }
 
 // [신규] 구절 검색 ----------------------------------------
