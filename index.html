@@ -45,8 +45,10 @@
         --canvas-parchment: #f5f5f7;      /* Parchment — 시그니처 오프화이트 */
         --surface-pearl: #fafafc;         /* Pearl — 고스트 버튼 */
         --surface-tile-dark: #272729;     /* Near-Black Tile */
+        --chip-accent-bg: rgba(0,102,204,0.08);   /* 아이콘 칩 — 단일 블루 액센트의 옅은 틴트 */
+        --chip-accent-fg: var(--primary);
         /* 경계 (Apple 헤어라인 — 선이라기보다 은은한 링) */
-        --border-soft: rgba(0,0,0,0.08);
+        --border-soft: rgba(0,0,0,0.10);
         --border-header: rgba(0,0,0,0.08);
         --border-input: rgba(0,0,0,0.08);
         --border-hover: rgba(0,0,0,0.16);
@@ -90,6 +92,8 @@
         --text-soft: #93a0b0;
         --text-faint: #93a0b0;
         --text-disabled: #6b7686;
+        --chip-accent-bg: rgba(41,151,255,0.16);
+        --chip-accent-fg: #2997ff;
     }
     * { box-sizing: border-box; }
     
@@ -276,18 +280,50 @@
     }
     .menu-row:hover { border-color: var(--border-hover); }
     .menu-row:active { transform: scale(0.97); }   /* Apple 시스템 공통 마이크로 인터랙션 */
-    /* Apple: 장식 그라데이션 제거 → 중립 Parchment 칩(이모지는 콘텐츠 글리프로 유지) */
-    .menu-row-ico { flex: 0 0 auto; width: 50px; height: 50px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.55em; color: var(--ink); background: var(--canvas-parchment); }
+    /* 단색 라인 SVG 아이콘 + 단일 블루 액센트 틴트 칩 */
+    .menu-row-ico { flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--chip-accent-fg); background: var(--chip-accent-bg); }
+    .menu-row-ico svg { width: 24px; height: 24px; }
     .menu-row-text { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .menu-row-title { font-size: 17px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.022em; }
     .menu-row-desc { font-size: 14px; color: var(--text-soft); font-weight: 400; letter-spacing: -0.016em; }
     .menu-row-arrow { flex: 0 0 auto; color: var(--primary); font-size: 1.5em; font-weight: 500; line-height: 1; }   /* 단일 블루 액센트 = '액션' 신호 */
 
-    [data-theme="dark"] .menu-row { background: #1b212b; border-color: #2a323e; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
-    [data-theme="dark"] .menu-row:hover { border-color: #3a4452; }
-    [data-theme="dark"] .menu-row-title { color: #eef2f7; }
-    [data-theme="dark"] .menu-row-desc { color: #93a0b0; }
-    [data-theme="dark"] .menu-row-arrow { color: #5b6675; }
+    [data-theme="dark"] .menu-row { background: var(--surface-card); border-color: var(--border-soft); box-shadow: none; }
+    [data-theme="dark"] .menu-row:hover { border-color: var(--border-hover); }
+    [data-theme="dark"] .menu-row-arrow { color: var(--primary-on-dark); }
+
+    /* ===== [신규] Apple식 홈 히어로 — 사진형 다크 타일(어둠 속 한 줄기 빛 + 펼쳐진 성경) ===== */
+    .home-hero { position: relative; overflow: hidden; border-radius: 28px; margin: 8px 0 24px;
+        padding: 92px 24px 150px; text-align: center;
+        background: #0a0705 url('hero-bible.svg') center 58% / cover no-repeat; }
+    /* 상단을 살짝 더 어둡게 → 흰 헤드라인 가독성 */
+    .home-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, rgba(6,5,4,0.62) 0%, rgba(6,5,4,0.2) 32%, rgba(6,5,4,0) 56%); }
+    .home-hero > * { position: relative; z-index: 1; }
+    .home-hero h2 { margin: 0; font-size: clamp(32px, 5.4vw, 52px); font-weight: 600; line-height: 1.06; letter-spacing: -0.03em; color: #fff; text-shadow: 0 2px 30px rgba(0,0,0,0.55); }
+    .home-hero p { margin: 14px auto 0; max-width: 540px; font-size: clamp(17px, 2.2vw, 21px); font-weight: 400; line-height: 1.36; letter-spacing: -0.012em; color: rgba(255,255,255,0.84); text-shadow: 0 1px 18px rgba(0,0,0,0.55); }
+    .home-hero .hero-cta { margin-top: 28px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .home-hero .btn-pill.ghost { color: #fff; border-color: rgba(255,255,255,0.55); }
+    .home-hero .btn-pill.ghost:hover { background: rgba(255,255,255,0.14); filter: none; }
+    @media (max-width: 480px) { .home-hero { padding: 60px 16px 116px; border-radius: 22px; } }
+
+    /* Apple 시그니처 블루 pill CTA */
+    .btn-pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        background: var(--primary); color: #fff; border: none; border-radius: var(--radius-pill);
+        padding: 12px 26px; font-size: 17px; font-weight: 400; letter-spacing: -0.01em; cursor: pointer;
+        transition: transform 0.2s, filter 0.2s; }
+    .btn-pill:hover { filter: brightness(1.06); }
+    .btn-pill:active { transform: scale(0.95); }
+    .btn-pill:focus-visible { outline: 2px solid var(--primary-focus); outline-offset: 2px; }
+    .btn-pill.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-pill.ghost:hover { background: rgba(0,102,204,0.06); filter: none; }
+    [data-theme="dark"] .btn-pill.ghost { color: var(--primary-on-dark); border-color: var(--primary-on-dark); }
+
+    /* 위계: 메인 2개 카드(외우기·퀴즈)를 살짝 강조 */
+    .menu-row.featured { background: var(--surface-card); border-color: var(--border-hover); }
+    .menu-row.featured .menu-row-ico { width: 54px; height: 54px; }
+    .menu-row.featured .menu-row-ico svg { width: 27px; height: 27px; }
+    .menu-row.featured .menu-row-title { font-size: 19px; }
 
     /* [신규] 헤더 - 로그인 환영 글씨 (이름 옆) */
     .welcome-text { font-size: 0.9rem; font-weight: 700; color: var(--secondary); white-space: nowrap; align-self: center; }
@@ -1422,7 +1458,7 @@
     [data-theme="dark"] .menu-card { box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
 
     /* ===== 나의 기록(동기부여 대시보드) ===== */
-    .menu-row.stats .menu-row-ico { background: var(--canvas-parchment); }
+    .menu-row.stats .menu-row-ico { background: var(--chip-accent-bg); }
     .stats-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
     .stats-head h2 { font-size: 1.4em; font-weight: 800; color: var(--secondary); margin: 0; }
     .stats-back { background: #eef2f7; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 700; color: var(--secondary); cursor: pointer; }
@@ -1757,34 +1793,42 @@
         <main class="scroll-content" id="scrollContent">
             <div class="container">
                 <div id="stepHome" class="active no-print">
+                    <section class="home-hero">
+                        <h2>말씀을 마음에 새기다</h2>
+                        <p>보고, 외우고, 확인하세요. 한 절씩 마음에 새기는 사무엘학교 암송 연습.</p>
+                        <div class="hero-cta">
+                            <button class="btn-pill" onclick="selectRootMode('study')">암송 외우기</button>
+                            <button class="btn-pill ghost" onclick="selectRootMode('quiz')">오늘의 퀴즈</button>
+                        </div>
+                    </section>
                     <div class="main-menu-list">
-                        <button class="menu-row study" onclick="selectRootMode('study')">
-                            <span class="menu-row-ico">📖</span>
+                        <button class="menu-row study featured" onclick="selectRootMode('study')">
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">암송 외우기</span><span class="menu-row-desc">구절을 보며 차근차근 외우기</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
-                        <button class="menu-row quiz" onclick="selectRootMode('quiz')">
-                            <span class="menu-row-ico">✍️</span>
+                        <button class="menu-row quiz featured" onclick="selectRootMode('quiz')">
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">암송 퀴즈</span><span class="menu-row-desc">일차별 퀴즈</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                         <button class="menu-row plowing" onclick="selectRootMode('plowing')">
-                            <span class="menu-row-ico">🌱</span>
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">예시 밭갈이</span><span class="menu-row-desc">예시밭갈이와 밭갈이 만들기</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                         <button class="menu-row stats" onclick="selectRootMode('stats')">
-                            <span class="menu-row-ico">🙋</span>
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">마이페이지</span><span class="menu-row-desc">나의 학습 기록과 수료 점수 계산</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                         <button class="menu-row rank" onclick="samuelOpenLeaderboard()">
-                            <span class="menu-row-ico">🥇</span>
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">오늘의 랭킹</span><span class="menu-row-desc">외운 구절·연속일수로 보는 전체 순위</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
                         <button class="menu-row battle" onclick="samuelOpenGame()">
-                            <span class="menu-row-ico">⚔️</span>
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">암송 게임</span><span class="menu-row-desc">형제 자매님들과 실시간 암송 대결</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
@@ -6914,8 +6958,8 @@ function initScriptSwipeAndZoom(isPC) {
   .nk-current { font-size: 1.3em; font-weight: 800; margin: 4px 0 18px; color: var(--primary); }
 
   /* 메뉴 아이콘 색 */
-  .menu-row.rank .menu-row-ico { background: var(--canvas-parchment); }
-  .menu-row.battle .menu-row-ico { background: var(--canvas-parchment); }
+  .menu-row.rank .menu-row-ico { background: var(--chip-accent-bg); }
+  .menu-row.battle .menu-row-ico { background: var(--chip-accent-bg); }
 
   /* 공통 풀스크린 오버레이 (랭킹/게임) */
   .sm-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 99998; padding: 16px; }
