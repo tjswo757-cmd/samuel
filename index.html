@@ -18,10 +18,6 @@
 <!-- [신규] Pretendard 웹폰트 (CSS에서 사용 중이나 누락되어 있던 폰트 로드) -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
-<!-- [신규] 에디토리얼 세리프 제목 — 한글 Noto Serif KR + 라틴 Playfair Display -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap">
 <title>사무엘학교</title>
 <style>
     /* 앱 실행 스플래시 화면(icon.png) */
@@ -39,8 +35,6 @@
         --primary-on-dark: #e0b25c;  /* 다크 위 골드 링크 */
         --on-primary: #1d1d1f;       /* 골드 버튼 위 텍스트 = 잉크(대비 5:1↑) */
         --secondary: #1d1d1f;        /* Ink — 제목/본문 */
-        /* 에디토리얼 세리프 제목 스택(라틴 Playfair → 한글 Noto Serif KR) */
-        --font-serif: "Playfair Display", "Noto Serif KR", Georgia, serif;
         --success: #2ecc71;
         --warning: #f39c12;
         --error: #e74c3c;
@@ -230,7 +224,7 @@
     }
     /* 화면 폭에 맞춰 유동 조절 + 넘치면 말줄임 */
     .title-small { font-size: clamp(0.62rem, 2.6vw, 0.85rem); color: var(--text-soft); font-weight: 400; margin: 0; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title-large { font-family: var(--font-serif); font-size: clamp(1.02rem, 4.3vw, 1.6rem); margin: 0; color: var(--text-strong); font-weight: 600; line-height: 1.12; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .title-large { font-size: clamp(0.98rem, 4.3vw, 1.55rem); margin: 0; color: var(--text-strong); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .nav-btn-group { display: flex; gap: 10px; margin-left: auto; flex-shrink: 0; }
     .nav-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 5px; color: var(--secondary); }
 
@@ -309,7 +303,7 @@
     .home-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
         background: linear-gradient(180deg, rgba(6,5,4,0.62) 0%, rgba(6,5,4,0.2) 32%, rgba(6,5,4,0) 56%); }
     .home-hero > * { position: relative; z-index: 1; }
-    .home-hero h2 { margin: 0; font-family: var(--font-serif); font-size: clamp(34px, 5.6vw, 56px); font-weight: 600; line-height: 1.12; letter-spacing: -0.005em; color: #fff; text-shadow: 0 2px 30px rgba(0,0,0,0.55); }
+    .home-hero h2 { margin: 0; font-size: clamp(32px, 5.4vw, 52px); font-weight: 600; line-height: 1.07; letter-spacing: -0.03em; color: #fff; text-shadow: 0 2px 30px rgba(0,0,0,0.55); }
     /* 에디토리얼 골드 룰 */
     .home-hero h2::after { content: ''; display: block; width: 60px; height: 2px; margin: 20px auto 0; background: var(--primary); border-radius: 2px; }
     .home-hero p { margin: 18px auto 0; max-width: 540px; font-size: clamp(17px, 2.2vw, 20px); font-weight: 400; line-height: 1.4; letter-spacing: -0.012em; color: rgba(255,255,255,0.84); text-shadow: 0 1px 18px rgba(0,0,0,0.55); }
@@ -348,7 +342,7 @@
     /* [신규] 홈 - 나의 진도 패널 */
     .home-progress { margin-top: 28px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 18px 18px 14px; box-shadow: var(--shadow-card); }
     .hp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-    .hp-head .hp-title { font-family: var(--font-serif); font-weight: 600; color: var(--text-strong); font-size: 1.2em; letter-spacing: 0; }
+    .hp-head .hp-title { font-weight: 700; color: var(--text-strong); font-size: 1.08em; letter-spacing: -0.02em; }
     .hp-head select { width: auto; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-size: 0.85em; font-weight: 700; }
     .hp-overall { font-size: 0.92em; color: #5b6675; margin-bottom: 14px; }
     .hp-overall b { color: var(--primary); font-size: 1.15em; }
@@ -374,7 +368,7 @@
     /* [신규] 홈 - 교회 공지사항 */
     .home-notice { margin-top: 24px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-card); }
     .hn-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .hn-title { font-family: var(--font-serif); font-weight: 600; color: var(--text-strong); font-size: 1.2em; letter-spacing: 0; }
+    .hn-title { font-weight: 700; color: var(--text-strong); font-size: 1.08em; letter-spacing: -0.02em; }
     .hn-refresh { background: none; border: none; cursor: pointer; color: #9aa6b3; font-size: 1.05em; padding: 2px 6px; border-radius: 8px; }
     .hn-refresh:hover { color: var(--primary); }
     .hn-list { display: flex; flex-direction: column; gap: 8px; }
@@ -920,7 +914,7 @@
     .float-btn { background: var(--secondary); color: white; border: none; padding: 7px 13px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
     .float-btn:hover { background: var(--primary); transform: translateY(-2px); }
 
-    .app-footer { text-align: center; color: var(--text-soft); font-size: 12px; letter-spacing: -0.01em; padding: 28px 15px; background-color: var(--canvas-parchment); border-top: 1px solid var(--border-soft); flex-shrink: 0; line-height: 1.5; font-weight: 400; }
+    .app-footer { text-align: center; color: var(--text-soft); font-size: 12px; letter-spacing: -0.01em; padding: 28px 15px; background-color: var(--surface-card); border-top: 1px solid var(--border-soft); flex-shrink: 0; line-height: 1.5; font-weight: 400; }
     .footer-hidden { display: none !important; }
 
     @media print {
