@@ -290,6 +290,16 @@
     [data-theme="dark"] .hn-item-title { color: #dfe6ee; }
     [data-theme="dark"] .hn-item-body { color: #aeb8c4; }
 
+    /* [신규] 홈 - 함께 접속 중인 형제자매 배너 */
+    .home-together { margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 9px;
+        background: linear-gradient(135deg, #eef4ff, #f4f0ff); border: 1px solid #e4ecfb; border-radius: 18px;
+        padding: 16px 18px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); text-align: center; }
+    .home-together .ht-emoji { font-size: 1.35em; line-height: 1; }
+    .home-together .ht-text { font-weight: 700; color: #4a5566; font-size: 1.02em; }
+    .home-together b { color: var(--primary); font-size: 1.18em; font-weight: 900; margin: 0 1px; }
+    [data-theme="dark"] .home-together { background: linear-gradient(135deg, #1a2333, #221d33); border-color: #2c3650; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+    [data-theme="dark"] .home-together .ht-text { color: #c8d2de; }
+
     /* [신규] 홈 - 구절 검색 */
     .home-search { margin-top: 22px; }
     .home-search input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 2px solid #e9ecef; font-size: 16px; outline: none; }
@@ -1673,7 +1683,6 @@
                 </div>
             </div>
             <div class="nav-btn-group">
-                <span class="nav-btn online-badge" id="onlineCount" title="지금 접속 중인 인원">👥 –</span>
                 <button class="nav-btn auth-btn" id="authBtn" onclick="samuelToggleAuth()" title="구글 로그인">로그인</button>
                 <span class="welcome-text hide-on-mobile" id="welcomeText" style="display:none;">환영합니다</span>
                 <button class="nav-btn fullscreen-btn hide-on-mobile" onclick="toggleFullscreen()" title="전체화면" aria-label="전체화면">⛶</button>
@@ -1744,6 +1753,11 @@
                             </div>
                             <div class="hn-list" id="hnList"><div class="hn-loading">공지를 불러오는 중…</div></div>
                         </div>
+                    </div>
+
+                    <div class="home-together no-print" id="homeTogether" title="지금 함께 접속 중인 인원">
+                        <span class="ht-emoji">🤝</span>
+                        <span class="ht-text">현재 <b id="onlineCountNum">–</b>명의 형제 자매님들이 함께하고 있어요!</span>
                     </div>
                 </div>
                 <div id="stepStats" class="no-print">
@@ -7157,8 +7171,8 @@ function renderCount(){
   const now = Date.now();
   let n = 0;
   for (const e of lastStatusEntries){ if (typeof e.ts === 'number' && (now - e.ts) < PRESENCE_WINDOW) n++; }
-  const el = document.getElementById('onlineCount');
-  if (el) el.textContent = '👥 ' + n;
+  const el = document.getElementById('onlineCountNum');
+  if (el) el.textContent = n;
 }
 function subscribeCount(){
   if (countSubscribed) return;
@@ -7241,7 +7255,7 @@ async function showAdminPresence(){
 }
 window.samuelAdminPresence = showAdminPresence;
 // 👥 배지 클릭 → 관리자면 디버그 패널
-(function(){ const oc = document.getElementById('onlineCount'); if (oc) oc.addEventListener('click', () => { if (isAdmin()) showAdminPresence(); }); })();
+(function(){ const oc = document.getElementById('homeTogether'); if (oc) oc.addEventListener('click', () => { if (isAdmin()) showAdminPresence(); }); })();
 
 function updateAuthUI(user){
   const btn = document.getElementById('authBtn');
@@ -7261,9 +7275,9 @@ function updateAuthUI(user){
   if (wel){
     wel.style.display = loggedIn ? 'inline' : 'none';
   }
-  // 관리자면 👥 배지를 눌러 접속자 상세를 볼 수 있게 표시
-  const oc = document.getElementById('onlineCount');
-  if (oc){ const adm = isAdmin(); oc.style.cursor = adm ? 'pointer' : ''; oc.title = adm ? '접속자 상세 보기(관리자)' : '지금 접속 중인 인원'; }
+  // 관리자면 함께 접속 배너를 눌러 접속자 상세를 볼 수 있게 표시
+  const oc = document.getElementById('homeTogether');
+  if (oc){ const adm = isAdmin(); oc.style.cursor = adm ? 'pointer' : ''; oc.title = adm ? '접속자 상세 보기(관리자)' : '지금 함께 접속 중인 인원'; }
   // 마이페이지·점수 계산기 등 classic 코드에서 쓰도록 전역 노출
   window.myNickname = loggedIn ? myNickname : null;
   window.myCourse = loggedIn ? myCourse : null;
