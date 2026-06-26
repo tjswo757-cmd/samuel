@@ -646,9 +646,9 @@
     /* [왼쪽 하단] 플렉슬 스타일 툴바 (항상 노출 · 드래그 이동) */
     .flex-toolbar {
         position: fixed; bottom: 24px; left: 20px;
-        background: white; padding: 6px 8px; border-radius: 30px;
+        background: white; padding: 3px 6px; border-radius: 30px;
         box-shadow: 0 6px 22px rgba(0,0,0,0.18);
-        display: none; flex-direction: row; align-items: center; gap: 5px; z-index: 1001; border: 1px solid #eee;
+        display: none; flex-direction: row; align-items: center; gap: 3px; z-index: 1001; border: 1px solid #eee;
         flex-wrap: nowrap;                     /* 가로=한 줄 막대, 세로=한 열 (wrap 주면 폭이 접혀 항상 세로처럼 보임) */
     }
     .flex-toolbar.active { display: flex !important; } /* 전역 .active{display:block!important} 무력화 → flex 유지(가로/세로 전환 동작) */
@@ -659,7 +659,7 @@
     .ft-handle { display: flex; align-items: center; justify-content: center; cursor: grab; color: #b8c0c9; padding: 0 2px; touch-action: none; -webkit-user-select: none; user-select: none; }
     .ft-handle:active { cursor: grabbing; }
     .ft-sep { width: 1px; align-self: stretch; background: #e8eaed; margin: 4px 1px; }
-    .ft-preset svg.ft-pen-ico { width: 20px; height: 24px; }
+    .ft-preset svg.ft-pen-ico { width: 16px; height: 19px; }
     .ft-preset { padding: 0; }
     .ft-wrong { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: var(--error); cursor: pointer; padding: 0 8px; -webkit-user-select: none; user-select: none; white-space: nowrap; }
     .ft-wrong input { width: 14px; height: 14px; accent-color: var(--error); margin: 0; }
@@ -675,9 +675,9 @@
     [data-theme="dark"] .ft-handle { color: #5b6675; }
     
     .flex-tool-btn {
-        width: 38px; height: 38px; border-radius: 50%; border: none; background: white; cursor: pointer; display: flex; justify-content: center; align-items: center; position: relative; transition: 0.2s; color: #555;
+        width: 30px; height: 30px; box-sizing: border-box; border-radius: 50%; border: none; background: white; cursor: pointer; display: flex; justify-content: center; align-items: center; position: relative; transition: 0.2s; color: #555;
     }
-    .flex-tool-btn svg { width: 20px; height: 20px; }
+    .flex-tool-btn svg { width: 17px; height: 17px; }
     .flex-tool-btn:hover { background-color: #f8f9fa; }
     .flex-tool-btn.active { background: #e8f4fd; color: var(--primary); border: 2px solid var(--primary); }
     .flex-tool-btn.toggled { background: #e8f4fd; color: var(--primary); border: 2px solid var(--primary); }
@@ -5139,6 +5139,7 @@ let isDrawing = false;
 let curStroke = null;
 let eraserPath = null;     // 지우개 제스처 경로(텍스트 하이라이트 제거용)
 let strokeBefore = null;   // 제스처 시작 시점 스냅샷
+let penForceErase = false; // [신규] S펜 버튼(또는 지우개 꼭지)을 누른 채 문지르는 동안 임시 지우개
 let drawKeyName = null;
 let drawDpr = 1;
 let drawResizeBound = false;
@@ -5359,7 +5360,9 @@ function onDrawDown(e) {
     const [x, y] = getDrawPos(e);
     strokeBefore = JSON.stringify(strokes);
     isDrawing = true;
-    if (currentTool === 'eraser') { eraserPath = [[x, y]]; eraseAt(x, y); return; }
+    // [신규] S펜 버튼(buttons&2) 또는 지우개 꼭지(buttons&32)를 누른 채 그으면 도구와 상관없이 지우개로 동작
+    penForceErase = (e.pointerType === 'pen' && ((e.buttons & 2) || (e.buttons & 32)));
+    if (currentTool === 'eraser' || penForceErase) { eraserPath = [[x, y]]; eraseAt(x, y); return; }
     const tool = currentTool;
     const pt = [round1(x), round1(y)];
     curStraight = !!(settings[tool] && settings[tool].straight);
@@ -5381,7 +5384,7 @@ function onDrawMove(e) {
     // 펜 입력의 중간 좌표(coalesced)를 모두 사용해 부드럽게 이어 그림
     const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
 
-    if (currentTool === 'eraser') {
+    if (currentTool === 'eraser' || penForceErase) {
         for (const ev of evs) { const [x, y] = getDrawPos(ev); if (eraserPath) eraserPath.push([x, y]); eraseAt(x, y); }
         return;
     }
@@ -5428,8 +5431,9 @@ function densifyStraight(s) {
 function onDrawUp(e) {
     if (!isDrawing) return;
     isDrawing = false;
-    if (currentTool === 'eraser' && eraserPath) { tryEraseTextAnnotations(eraserPath); eraserPath = null; }
-    if (currentTool !== 'eraser' && curStroke && curStroke.p.length) {
+    const wasErasing = (currentTool === 'eraser' || penForceErase);
+    if (wasErasing && eraserPath) { tryEraseTextAnnotations(eraserPath); eraserPath = null; }
+    if (!wasErasing && curStroke && curStroke.p.length) {
         if (curStraight) densifyStraight(curStroke);
         strokes.push(curStroke);
         // [신규] 글자 위에 그은 펜/형광펜이면 텍스트 하이라이트/밑줄로 변환 → 암송 도우미에도 반영
@@ -5446,6 +5450,7 @@ function onDrawUp(e) {
     }
     curStroke = null;
     curStraight = false;
+    penForceErase = false;
     commitHistory();
     redrawStrokes();
 }
