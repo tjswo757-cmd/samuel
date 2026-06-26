@@ -27,14 +27,69 @@
     [data-theme="dark"] #appSplash { background: #14181f; }
 
     :root {
-        --primary: #3498db;
-        --secondary: #2c3e50; 
-        --success: #2ecc71; 
-        --warning: #f39c12; 
-        --error: #e74c3c; 
-        --bg: #ffffff; 
-        --light-blue: #e8f4fd; 
+        /* ── 브랜드 색 (Apple 디자인 언어 적용 · 단일 블루 액센트) ── */
+        --primary: #0066cc;          /* Action Blue — 모든 인터랙션의 단일 색 */
+        --primary-focus: #0071e3;    /* 키보드 포커스 링 */
+        --primary-on-dark: #2997ff;  /* 다크 타일 위 링크 (Sky Link Blue) */
+        --secondary: #1d1d1f;        /* Ink — 제목/본문 (순검정 대신 사진톤) */
+        --success: #2ecc71;
+        --warning: #f39c12;
+        --error: #e74c3c;
+        --bg: #ffffff;
+        --light-blue: #e8f4fd;
         --plowing-color: #27ae60; /* 밭갈이용 초록색 */
+
+        /* ── 디자인 토큰 (Apple) ── */
+        /* 표면 */
+        --surface-card: #ffffff;          /* Pure White */
+        --canvas-parchment: #f5f5f7;      /* Parchment — 시그니처 오프화이트 */
+        --surface-pearl: #fafafc;         /* Pearl — 고스트 버튼 */
+        --surface-tile-dark: #272729;     /* Near-Black Tile */
+        /* 경계 (Apple 헤어라인 — 선이라기보다 은은한 링) */
+        --border-soft: rgba(0,0,0,0.08);
+        --border-header: rgba(0,0,0,0.08);
+        --border-input: rgba(0,0,0,0.08);
+        --border-hover: rgba(0,0,0,0.16);
+        --hairline: #e0e0e0;
+        /* 텍스트 단계 (Apple 그레이) */
+        --text-strong: var(--secondary);  /* Ink 제목 */
+        --ink: #1d1d1f;
+        --text-body: #1d1d1f;
+        --text-muted: #6e6e73;
+        --text-soft: #86868b;             /* Apple 보조 그레이 */
+        --text-faint: #86868b;
+        --text-disabled: #7a7a7a;
+        --on-dark: #ffffff;
+        --body-muted-dark: #cccccc;
+        /* 라운드 (Apple 스케일) */
+        --radius-sm: 8px; --radius-md: 11px; --radius-lg: 18px; --radius-pill: 9999px;
+        /* 그림자 — Apple은 시스템 전체에서 '제품 사진'에만 단 하나의 그림자.
+           카드/버튼/텍스트엔 그림자 없음(경계는 색·헤어라인·표면전환으로). */
+        --shadow-product: rgba(0,0,0,0.22) 3px 5px 30px 0;
+        --shadow-card: none;
+        --shadow-menu: none;
+        --shadow-hover: none;
+        --shadow-icon: none;
+        /* z-index 레이어 (난립 방지) */
+        --z-header: 10; --z-toolbar: 1001; --z-popup: 1002; --z-overlay: 3000; --z-splash: 2147483647;
+    }
+    /* 다크모드 토큰 — 앱 자체 다크 테마 유지(스펙의 '주간 라이트' 기반에 맞춤) */
+    [data-theme="dark"] {
+        --surface-card: #1b212b;
+        --canvas-parchment: #14181f;
+        --surface-pearl: #232b36;
+        --border-soft: rgba(255,255,255,0.10);
+        --border-header: rgba(255,255,255,0.10);
+        --border-input: rgba(255,255,255,0.14);
+        --border-hover: rgba(255,255,255,0.22);
+        --hairline: #2a323e;
+        --text-strong: #f5f5f7;
+        --ink: #f5f5f7;
+        --text-body: #f5f5f7;
+        --text-muted: #aeb8c4;
+        --text-soft: #93a0b0;
+        --text-faint: #93a0b0;
+        --text-disabled: #6b7686;
     }
     * { box-sizing: border-box; }
     
@@ -45,14 +100,20 @@
 /* [모바일 화면 깨짐 방지용 코드] */
 
     /* 전체 화면 설정 */
-    html, body { 
-        font-family: 'Pretendard', sans-serif; 
-        margin: 0; 
-        padding: 0; 
-        background-color: var(--bg); 
-        color: #333; 
-        height: 100dvh; 
-        overflow: hidden; 
+    html, body {
+        /* Apple 디바이스 → 진짜 SF Pro + Apple SD Gothic Neo(한글), 그 외 → Pretendard 폴백 */
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, 'Pretendard', "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg);
+        color: var(--ink);                 /* Near-Black Ink #1d1d1f */
+        height: 100dvh;
+        overflow: hidden;
+        font-size: 17px;                   /* Apple: 본문 17px (16px 아님) */
+        line-height: 1.47;
+        letter-spacing: -0.01em;           /* 'Apple tight' 미세 트래킹 */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     .app-wrapper { 
@@ -139,7 +200,7 @@
 
     /* 메인 컨테이너 */
     .main-container { flex: 1; height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; min-width: 0; }
-    .fixed-header { height: 70px; background: white; border-bottom: 1px solid #f0f4f8; display: flex; align-items: center; padding: 0 20px; flex-shrink: 0; z-index: 10; }
+    .fixed-header { height: 70px; background: var(--surface-card); border-bottom: 1px solid var(--border-header); display: flex; align-items: center; padding: 0 20px; flex-shrink: 0; z-index: var(--z-header); }
     .header-hidden { display: none !important; }
     .header-title-area {
         flex-grow: 1;
@@ -155,8 +216,8 @@
         overflow: hidden;
     }
     /* 화면 폭에 맞춰 유동 조절 + 넘치면 말줄임 */
-    .title-small { font-size: clamp(0.62rem, 2.6vw, 0.9rem); color: #7f8c8d; font-weight: 700; margin: 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title-large { font-size: clamp(0.98rem, 4.3vw, 1.6rem); margin: 0; color: var(--secondary); font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .title-small { font-size: clamp(0.62rem, 2.6vw, 0.85rem); color: var(--text-soft); font-weight: 400; margin: 0; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .title-large { font-size: clamp(0.98rem, 4.3vw, 1.55rem); margin: 0; color: var(--text-strong); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .nav-btn-group { display: flex; gap: 10px; margin-left: auto; flex-shrink: 0; }
     .nav-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 5px; color: var(--secondary); }
 
@@ -167,8 +228,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        /* [신규] 홈/메뉴 은은한 그라데이션 배경 */
-        background: linear-gradient(180deg, #f4f8fd 0%, #eaf0f7 100%);
+        /* Apple: 장식 그라데이션 제거 → 시그니처 Parchment 캔버스 */
+        background: var(--canvas-parchment);
     }
 
     .container {
@@ -203,24 +264,24 @@
     .theme-toggle-btn { font-size: 20px !important; }
 
     /* [신규] 가로 리스트형 메뉴 */
-    .main-menu-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 24px; }
+    /* Apple: 콘텐츠를 가운데 정렬한 갤러리 폭 */
+    #stepHome { max-width: 1040px; margin: 0 auto; }
+    .main-menu-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 8px; }
     @media (max-width: 560px) { .main-menu-list { grid-template-columns: 1fr; } }
     .menu-row {
-        display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer;
-        background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 16px 18px;
-        box-shadow: 0 4px 14px rgba(15,30,60,0.06);
-        transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+        display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; cursor: pointer;
+        background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 20px 22px;
+        box-shadow: var(--shadow-menu);   /* Apple: 카드엔 그림자 없음(토큰=none) */
+        transition: transform 0.22s cubic-bezier(0.4,0,0.2,1), border-color 0.22s;
     }
-    .menu-row:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15,30,60,0.12); border-color: #dde6f0; }
-    .menu-row:active { transform: scale(0.995); }
-    .menu-row-ico { flex: 0 0 auto; width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.7em; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
-    .menu-row.study .menu-row-ico { background: linear-gradient(135deg, #6dd5ed, #2193b0); }
-    .menu-row.quiz .menu-row-ico { background: linear-gradient(135deg, #ff9966, #ff5e62); }
-    .menu-row.plowing .menu-row-ico { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+    .menu-row:hover { border-color: var(--border-hover); }
+    .menu-row:active { transform: scale(0.97); }   /* Apple 시스템 공통 마이크로 인터랙션 */
+    /* Apple: 장식 그라데이션 제거 → 중립 Parchment 칩(이모지는 콘텐츠 글리프로 유지) */
+    .menu-row-ico { flex: 0 0 auto; width: 50px; height: 50px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.55em; color: var(--ink); background: var(--canvas-parchment); }
     .menu-row-text { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .menu-row-title { font-size: 1.15em; font-weight: 800; color: var(--secondary); }
-    .menu-row-desc { font-size: 0.85em; color: #8a96a3; font-weight: 500; }
-    .menu-row-arrow { flex: 0 0 auto; color: #c3ccd6; font-size: 1.7em; font-weight: 700; line-height: 1; }
+    .menu-row-title { font-size: 17px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.022em; }
+    .menu-row-desc { font-size: 14px; color: var(--text-soft); font-weight: 400; letter-spacing: -0.016em; }
+    .menu-row-arrow { flex: 0 0 auto; color: var(--primary); font-size: 1.5em; font-weight: 500; line-height: 1; }   /* 단일 블루 액센트 = '액션' 신호 */
 
     [data-theme="dark"] .menu-row { background: #1b212b; border-color: #2a323e; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
     [data-theme="dark"] .menu-row:hover { border-color: #3a4452; }
@@ -238,16 +299,16 @@
     @media (max-width: 760px) { .home-bottom-row { grid-template-columns: 1fr; } }
 
     /* [신규] 홈 - 나의 진도 패널 */
-    .home-progress { margin-top: 28px; background: #fff; border: 1px solid #eef1f5; border-radius: 18px; padding: 18px 18px 14px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
+    .home-progress { margin-top: 28px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 18px 18px 14px; box-shadow: var(--shadow-card); }
     .hp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-    .hp-head .hp-title { font-weight: 800; color: var(--secondary); font-size: 1.05em; }
+    .hp-head .hp-title { font-weight: 600; color: var(--text-strong); font-size: 1.05em; letter-spacing: -0.02em; }
     .hp-head select { width: auto; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-size: 0.85em; font-weight: 700; }
     .hp-overall { font-size: 0.92em; color: #5b6675; margin-bottom: 14px; }
     .hp-overall b { color: var(--primary); font-size: 1.15em; }
     .hp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
     .hp-day { flex: 0 0 52px; font-weight: 700; color: var(--secondary); font-size: 0.88em; }
     .hp-bar { flex: 1; height: 10px; background: #eef1f5; border-radius: 6px; overflow: hidden; }
-    .hp-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.5s ease; }
+    .hp-fill { height: 100%; border-radius: 6px; background: var(--primary); transition: width 0.5s ease; }
     .hp-num { flex: 0 0 92px; text-align: right; font-size: 0.82em; font-weight: 700; color: #5b6675; }
     .hp-num small { color: #9aa6b3; font-weight: 600; }
     .hp-date { display: block; font-size: 0.72em; color: #b0b8c1; font-weight: 600; margin-top: 1px; }
@@ -264,9 +325,9 @@
     [data-theme="dark"] .hp-num { color: #aeb8c4; }
 
     /* [신규] 홈 - 교회 공지사항 */
-    .home-notice { margin-top: 24px; background: #fff; border: 1px solid #eef1f5; border-radius: 18px; padding: 18px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
+    .home-notice { margin-top: 24px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-card); }
     .hn-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .hn-title { font-weight: 800; color: var(--secondary); font-size: 1.05em; }
+    .hn-title { font-weight: 600; color: var(--text-strong); font-size: 1.05em; letter-spacing: -0.02em; }
     .hn-refresh { background: none; border: none; cursor: pointer; color: #9aa6b3; font-size: 1.05em; padding: 2px 6px; border-radius: 8px; }
     .hn-refresh:hover { color: var(--primary); }
     .hn-list { display: flex; flex-direction: column; gap: 8px; }
@@ -292,18 +353,19 @@
 
     /* [신규] 홈 - 함께 접속 중인 형제자매 배너 */
     .home-together { margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 9px;
-        background: #fff; border: 1px solid #eef1f5; border-radius: 18px;
-        padding: 16px 18px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); text-align: center; }
-    .home-together .ht-emoji { font-size: 1.35em; line-height: 1; }
-    .home-together .ht-text { font-weight: 700; color: #4a5566; font-size: 1.02em; }
-    .home-together b { color: var(--primary); font-size: 1.18em; font-weight: 900; margin: 0 1px; }
+        background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
+        padding: 16px 18px; box-shadow: var(--shadow-card); text-align: center; }
+    .home-together .ht-emoji { font-size: 1.3em; line-height: 1; }
+    .home-together .ht-text { font-weight: 400; color: var(--text-muted); font-size: 17px; letter-spacing: -0.016em; }
+    .home-together b { color: var(--primary); font-size: 1.1em; font-weight: 600; margin: 0 1px; }
     [data-theme="dark"] .home-together { background: #1b212b; border-color: #2a323e; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
     [data-theme="dark"] .home-together .ht-text { color: #c8d2de; }
 
     /* [신규] 홈 - 구절 검색 */
     .home-search { margin-top: 22px; }
-    .home-search input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 2px solid #e9ecef; font-size: 16px; outline: none; }
-    .home-search input:focus { border-color: var(--primary); }
+    .home-search input { width: 100%; padding: 12px 20px; height: 48px; border-radius: var(--radius-pill); border: 1px solid var(--border-input); background: var(--surface-card); color: var(--ink); font-size: 17px; letter-spacing: -0.01em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .home-search input::placeholder { color: var(--text-soft); }
+    .home-search input:focus { border-color: var(--primary-focus); box-shadow: 0 0 0 3px rgba(0,113,227,0.18); }
     .vs-results { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
     .vs-count { font-size: 0.8em; color: #9aa6b3; font-weight: 700; padding: 2px 2px 0; }
     .vs-card { background: #fff; border: 1px solid #eef1f5; border-radius: 12px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(15,30,60,0.05); }
@@ -811,7 +873,7 @@
     .float-btn { background: var(--secondary); color: white; border: none; padding: 7px 13px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
     .float-btn:hover { background: var(--primary); transform: translateY(-2px); }
 
-    .app-footer { text-align: center; color: #999; font-size: 0.85em; padding: 15px; background-color: var(--bg); border-top: 1px solid #eee; flex-shrink: 0; line-height: 1.5; font-weight: 600; }
+    .app-footer { text-align: center; color: var(--text-soft); font-size: 12px; letter-spacing: -0.01em; padding: 28px 15px; background-color: var(--canvas-parchment); border-top: 1px solid var(--border-soft); flex-shrink: 0; line-height: 1.5; font-weight: 400; }
     .footer-hidden { display: none !important; }
 
     @media print {
@@ -1360,7 +1422,7 @@
     [data-theme="dark"] .menu-card { box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
 
     /* ===== 나의 기록(동기부여 대시보드) ===== */
-    .menu-row.stats .menu-row-ico { background: linear-gradient(135deg, #f6d365, #fda085); }
+    .menu-row.stats .menu-row-ico { background: var(--canvas-parchment); }
     .stats-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
     .stats-head h2 { font-size: 1.4em; font-weight: 800; color: var(--secondary); margin: 0; }
     .stats-back { background: #eef2f7; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 700; color: var(--secondary); cursor: pointer; }
@@ -6852,8 +6914,8 @@ function initScriptSwipeAndZoom(isPC) {
   .nk-current { font-size: 1.3em; font-weight: 800; margin: 4px 0 18px; color: var(--primary); }
 
   /* 메뉴 아이콘 색 */
-  .menu-row.rank .menu-row-ico { background: linear-gradient(135deg, #f7971e, #ffd200); }
-  .menu-row.battle .menu-row-ico { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
+  .menu-row.rank .menu-row-ico { background: var(--canvas-parchment); }
+  .menu-row.battle .menu-row-ico { background: var(--canvas-parchment); }
 
   /* 공통 풀스크린 오버레이 (랭킹/게임) */
   .sm-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 99998; padding: 16px; }
@@ -8129,6 +8191,20 @@ function restoreFullscreen(){
   document.addEventListener('pointerdown', re, { once: true });
   document.addEventListener('click', re, { once: true });
 }
+</script>
+
+<!-- ===== PWA Service Worker 등록 (오프라인 지원) ===== -->
+<script>
+(function(){
+  if (!('serviceWorker' in navigator)) return;            // 미지원 브라우저는 조용히 통과
+  if (location.protocol === 'file:') return;              // file:// 에서는 SW 불가(HTTPS/localhost 필요)
+  window.addEventListener('load', function(){
+    // 첫 설치: 자동 활성화되어 다음 요청부터 오프라인 가능
+    // 업데이트: 새 버전은 기존 탭이 모두 닫힌 뒤(다음 실행) 자연스럽게 적용 → 사용 중 방해 없음
+    navigator.serviceWorker.register('./sw.js')
+      .catch(function(){ /* 등록 실패는 앱 동작에 영향 없음 */ });
+  });
+})();
 </script>
 
 </body>
