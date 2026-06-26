@@ -18,6 +18,10 @@
 <!-- [신규] Pretendard 웹폰트 (CSS에서 사용 중이나 누락되어 있던 폰트 로드) -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+<!-- [신규] 에디토리얼 세리프 제목 — 한글 Noto Serif KR + 라틴 Playfair Display -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap">
 <title>사무엘학교</title>
 <style>
     /* 앱 실행 스플래시 화면(icon.png) */
@@ -27,11 +31,16 @@
     [data-theme="dark"] #appSplash { background: #14181f; }
 
     :root {
-        /* ── 브랜드 색 (Apple 디자인 언어 적용 · 단일 블루 액센트) ── */
-        --primary: #0066cc;          /* Action Blue — 모든 인터랙션의 단일 색 */
-        --primary-focus: #0071e3;    /* 키보드 포커스 링 */
-        --primary-on-dark: #2997ff;  /* 다크 타일 위 링크 (Sky Link Blue) */
-        --secondary: #1d1d1f;        /* Ink — 제목/본문 (순검정 대신 사진톤) */
+        /* ── 브랜드 색 (에디토리얼·경건 · 단일 웜 골드 액센트) ── */
+        --primary: #b8862f;          /* Warm Gold — 채움/아이콘/큰 글리프 (히어로 촛불빛과 연결) */
+        --primary-strong: #9a6e1f;   /* 진한 골드 — hover/press */
+        --primary-text: #836016;     /* 라이트 위 작은 텍스트 링크용(대비 4.5:1↑ 확보) */
+        --primary-focus: #c0902c;    /* 키보드 포커스 링 */
+        --primary-on-dark: #e0b25c;  /* 다크 위 골드 링크 */
+        --on-primary: #1d1d1f;       /* 골드 버튼 위 텍스트 = 잉크(대비 5:1↑) */
+        --secondary: #1d1d1f;        /* Ink — 제목/본문 */
+        /* 에디토리얼 세리프 제목 스택(라틴 Playfair → 한글 Noto Serif KR) */
+        --font-serif: "Playfair Display", "Noto Serif KR", Georgia, serif;
         --success: #2ecc71;
         --warning: #f39c12;
         --error: #e74c3c;
@@ -42,10 +51,10 @@
         /* ── 디자인 토큰 (Apple) ── */
         /* 표면 */
         --surface-card: #ffffff;          /* Pure White */
-        --canvas-parchment: #f5f5f7;      /* Parchment — 시그니처 오프화이트 */
+        --canvas-parchment: #f7f5f1;      /* Warm Paper — 따뜻한 오프화이트 */
         --surface-pearl: #fafafc;         /* Pearl — 고스트 버튼 */
         --surface-tile-dark: #272729;     /* Near-Black Tile */
-        --chip-accent-bg: rgba(0,102,204,0.08);   /* 아이콘 칩 — 단일 블루 액센트의 옅은 틴트 */
+        --chip-accent-bg: rgba(184,134,47,0.13);   /* 아이콘 칩 — 웜 골드 옅은 틴트 */
         --chip-accent-fg: var(--primary);
         /* 경계 (Apple 헤어라인 — 선이라기보다 은은한 링) */
         --border-soft: rgba(0,0,0,0.10);
@@ -92,8 +101,8 @@
         --text-soft: #93a0b0;
         --text-faint: #93a0b0;
         --text-disabled: #6b7686;
-        --chip-accent-bg: rgba(41,151,255,0.16);
-        --chip-accent-fg: #2997ff;
+        --chip-accent-bg: rgba(224,178,92,0.18);
+        --chip-accent-fg: #e0b25c;
     }
     * { box-sizing: border-box; }
     
@@ -221,7 +230,7 @@
     }
     /* 화면 폭에 맞춰 유동 조절 + 넘치면 말줄임 */
     .title-small { font-size: clamp(0.62rem, 2.6vw, 0.85rem); color: var(--text-soft); font-weight: 400; margin: 0; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title-large { font-size: clamp(0.98rem, 4.3vw, 1.55rem); margin: 0; color: var(--text-strong); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .title-large { font-family: var(--font-serif); font-size: clamp(1.02rem, 4.3vw, 1.6rem); margin: 0; color: var(--text-strong); font-weight: 600; line-height: 1.12; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .nav-btn-group { display: flex; gap: 10px; margin-left: auto; flex-shrink: 0; }
     .nav-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 5px; color: var(--secondary); }
 
@@ -300,23 +309,25 @@
     .home-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
         background: linear-gradient(180deg, rgba(6,5,4,0.62) 0%, rgba(6,5,4,0.2) 32%, rgba(6,5,4,0) 56%); }
     .home-hero > * { position: relative; z-index: 1; }
-    .home-hero h2 { margin: 0; font-size: clamp(32px, 5.4vw, 52px); font-weight: 600; line-height: 1.06; letter-spacing: -0.03em; color: #fff; text-shadow: 0 2px 30px rgba(0,0,0,0.55); }
-    .home-hero p { margin: 14px auto 0; max-width: 540px; font-size: clamp(17px, 2.2vw, 21px); font-weight: 400; line-height: 1.36; letter-spacing: -0.012em; color: rgba(255,255,255,0.84); text-shadow: 0 1px 18px rgba(0,0,0,0.55); }
+    .home-hero h2 { margin: 0; font-family: var(--font-serif); font-size: clamp(34px, 5.6vw, 56px); font-weight: 600; line-height: 1.12; letter-spacing: -0.005em; color: #fff; text-shadow: 0 2px 30px rgba(0,0,0,0.55); }
+    /* 에디토리얼 골드 룰 */
+    .home-hero h2::after { content: ''; display: block; width: 60px; height: 2px; margin: 20px auto 0; background: var(--primary); border-radius: 2px; }
+    .home-hero p { margin: 18px auto 0; max-width: 540px; font-size: clamp(17px, 2.2vw, 20px); font-weight: 400; line-height: 1.4; letter-spacing: -0.012em; color: rgba(255,255,255,0.84); text-shadow: 0 1px 18px rgba(0,0,0,0.55); }
     .home-hero .hero-cta { margin-top: 28px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .home-hero .btn-pill.ghost { color: #fff; border-color: rgba(255,255,255,0.55); }
     .home-hero .btn-pill.ghost:hover { background: rgba(255,255,255,0.14); filter: none; }
     @media (max-width: 480px) { .home-hero { padding: 60px 16px 116px; border-radius: 22px; } }
 
-    /* Apple 시그니처 블루 pill CTA */
+    /* 웜 골드 pill CTA — 골드 채움 + 잉크 텍스트(대비 5:1↑) */
     .btn-pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-        background: var(--primary); color: #fff; border: none; border-radius: var(--radius-pill);
-        padding: 12px 26px; font-size: 17px; font-weight: 400; letter-spacing: -0.01em; cursor: pointer;
+        background: var(--primary); color: var(--on-primary); border: none; border-radius: var(--radius-pill);
+        padding: 12px 26px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer;
         transition: transform 0.2s, filter 0.2s; }
-    .btn-pill:hover { filter: brightness(1.06); }
+    .btn-pill:hover { filter: brightness(1.07); }   /* 어둡게 X → 살짝 밝게: 잉크 텍스트 대비 유지(≥5:1) */
     .btn-pill:active { transform: scale(0.95); }
     .btn-pill:focus-visible { outline: 2px solid var(--primary-focus); outline-offset: 2px; }
-    .btn-pill.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-    .btn-pill.ghost:hover { background: rgba(0,102,204,0.06); filter: none; }
+    .btn-pill.ghost { background: transparent; color: var(--primary-text); border: 1px solid var(--primary); }
+    .btn-pill.ghost:hover { background: rgba(184,134,47,0.08); }
     [data-theme="dark"] .btn-pill.ghost { color: var(--primary-on-dark); border-color: var(--primary-on-dark); }
 
     /* 위계: 메인 2개 카드(외우기·퀴즈)를 살짝 강조 */
@@ -337,7 +348,7 @@
     /* [신규] 홈 - 나의 진도 패널 */
     .home-progress { margin-top: 28px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 18px 18px 14px; box-shadow: var(--shadow-card); }
     .hp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-    .hp-head .hp-title { font-weight: 600; color: var(--text-strong); font-size: 1.05em; letter-spacing: -0.02em; }
+    .hp-head .hp-title { font-family: var(--font-serif); font-weight: 600; color: var(--text-strong); font-size: 1.2em; letter-spacing: 0; }
     .hp-head select { width: auto; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-size: 0.85em; font-weight: 700; }
     .hp-overall { font-size: 0.92em; color: #5b6675; margin-bottom: 14px; }
     .hp-overall b { color: var(--primary); font-size: 1.15em; }
@@ -363,7 +374,7 @@
     /* [신규] 홈 - 교회 공지사항 */
     .home-notice { margin-top: 24px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-card); }
     .hn-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .hn-title { font-weight: 600; color: var(--text-strong); font-size: 1.05em; letter-spacing: -0.02em; }
+    .hn-title { font-family: var(--font-serif); font-weight: 600; color: var(--text-strong); font-size: 1.2em; letter-spacing: 0; }
     .hn-refresh { background: none; border: none; cursor: pointer; color: #9aa6b3; font-size: 1.05em; padding: 2px 6px; border-radius: 8px; }
     .hn-refresh:hover { color: var(--primary); }
     .hn-list { display: flex; flex-direction: column; gap: 8px; }
@@ -401,7 +412,7 @@
     .home-search { margin-top: 22px; }
     .home-search input { width: 100%; padding: 12px 20px; height: 48px; border-radius: var(--radius-pill); border: 1px solid var(--border-input); background: var(--surface-card); color: var(--ink); font-size: 17px; letter-spacing: -0.01em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
     .home-search input::placeholder { color: var(--text-soft); }
-    .home-search input:focus { border-color: var(--primary-focus); box-shadow: 0 0 0 3px rgba(0,113,227,0.18); }
+    .home-search input:focus { border-color: var(--primary-focus); box-shadow: 0 0 0 3px rgba(184,134,47,0.20); }
     .vs-results { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
     .vs-count { font-size: 0.8em; color: #9aa6b3; font-weight: 700; padding: 2px 2px 0; }
     .vs-card { background: #fff; border: 1px solid #eef1f5; border-radius: 12px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(15,30,60,0.05); }
@@ -1842,7 +1853,7 @@
                     <div class="home-bottom-row">
                         <div class="home-progress">
                             <div class="hp-head">
-                                <span class="hp-title">📊 나의 진도</span>
+                                <span class="hp-title">나의 진도</span>
                                 <select id="progressCourse" onchange="renderHomeProgress()">
                                     <option value="1">1과정</option><option value="2">2과정</option><option value="3">3과정</option><option value="4">4과정</option>
                                 </select>
@@ -1854,7 +1865,7 @@
 
                         <div class="home-notice" id="homeNotice" style="display:none;">
                             <div class="hn-head">
-                                <span class="hn-title">📢 대학선교부 공지사항</span>
+                                <span class="hn-title">대학선교부 공지사항</span>
                                 <button class="hn-refresh" onclick="loadChurchNotices(true)" title="새로고침">⟳</button>
                             </div>
                             <div class="hn-list" id="hnList"><div class="hn-loading">공지를 불러오는 중…</div></div>
