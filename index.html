@@ -1403,9 +1403,9 @@
 
     /* [신규] 마이페이지 학습 분석 (나의 진도 + 일차별 최다 오답) */
     .mp-analytics { background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 16px 16px 14px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(15,30,60,0.05); }
-    .mp-an-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .mp-an-title { font-weight: 800; color: var(--secondary); font-size: 1.08em; }
-    .mp-an-course { padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-weight: 700; font-size: 0.85em; cursor: pointer; }
+    .mp-an-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: nowrap; }
+    .mp-an-title { font-weight: 800; color: var(--secondary); font-size: 1.08em; white-space: nowrap; flex: 0 0 auto; }
+    .mp-an-course { width: auto; flex: 0 0 auto; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #e1e6ec; font-weight: 700; font-size: 0.85em; cursor: pointer; }
     .mp-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0f0f0; }
     .mp-block:first-child { border-top: none; padding-top: 0; margin-top: 0; }
     .mp-block-title { font-weight: 700; color: var(--secondary); font-size: 0.98em; margin-bottom: 10px; }
@@ -1806,7 +1806,6 @@
                 <div id="stepStats" class="no-print">
                     <div class="stats-head">
                         <h2><svg class="ttl-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</h2>
-                        <button class="stats-back" onclick="showStep('stepHome')">‹ 홈</button>
                     </div>
                     <div id="statsContent"></div>
                 </div>
