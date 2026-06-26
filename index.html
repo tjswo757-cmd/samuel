@@ -2685,10 +2685,10 @@ function toggleFullscreen() { isFullscreen() ? exitAppFullscreen() : enterAppFul
 let chromeRevealTimer = null;
 function revealChrome(edges) {
     if (!document.body.classList.contains('study-immersive')) return;
+    // 하단 바(말씀 푸터)는 몰입 모드(암송 외우기 등)에서는 띄우지 않음 → 메인화면에서만 보임
     const showTop = !edges || edges === 'both' || edges === 'top';
-    const showBottom = !edges || edges === 'both' || edges === 'bottom';
     document.body.classList.toggle('reveal-top', showTop);
-    document.body.classList.toggle('reveal-bottom', showBottom);
+    document.body.classList.remove('reveal-bottom');
     if (chromeRevealTimer) clearTimeout(chromeRevealTimer);
     chromeRevealTimer = setTimeout(() => document.body.classList.remove('reveal-top', 'reveal-bottom'), 2800);
 }
@@ -2706,11 +2706,9 @@ function onStudyChromeWheel(e) {
     const scrollable = sc.scrollHeight > sc.clientHeight + 8;
     if (!scrollable) {
         if (e.deltaY < -4) revealChrome('top');
-        else if (e.deltaY > 4) revealChrome('bottom');
         return;
     }
     if (sc.scrollTop <= 2 && e.deltaY < -4) revealChrome('top');
-    else if ((sc.scrollTop + sc.clientHeight) >= (sc.scrollHeight - 2) && e.deltaY > 4) revealChrome('bottom');
 }
 // 첫 사용자 동작에서 자동으로 전체화면 시도(브라우저 정책상 제스처 필요). iOS Safari는 미지원 → 홈화면 추가 권장.
 function armAutoFullscreen() {
@@ -5353,6 +5351,13 @@ function commitHistory() {
     strokeBefore = null;
 }
 
+// [신규] S펜 버튼/지우개 꼭지 감지 — 기기·브라우저마다 보고 방식이 달라 넓게 인식
+//  buttons: 배럴 버튼=2비트, 지우개 꼭지=32비트 / button: 보조=2, 지우개=5
+function isPenEraseSignal(e) {
+    if (e.pointerType !== 'pen') return false;
+    return (e.buttons & 2) !== 0 || (e.buttons & 32) !== 0 || e.button === 2 || e.button === 5;
+}
+
 function onDrawDown(e) {
     if (!isPenModeActive || !isDrawTool(currentTool)) return;
     if (!drawCanvas.classList.contains('draw-active')) return;
@@ -5364,8 +5369,8 @@ function onDrawDown(e) {
     const [x, y] = getDrawPos(e);
     strokeBefore = JSON.stringify(strokes);
     isDrawing = true;
-    // [신규] S펜 버튼(buttons&2) 또는 지우개 꼭지(buttons&32)를 누른 채 그으면 도구와 상관없이 지우개로 동작
-    penForceErase = (e.pointerType === 'pen' && ((e.buttons & 2) || (e.buttons & 32)));
+    // [신규] S펜 버튼을 누른 채 그으면 도구와 상관없이 지우개로 동작
+    penForceErase = isPenEraseSignal(e);
     if (currentTool === 'eraser' || penForceErase) { eraserPath = [[x, y]]; eraseAt(x, y); return; }
     const tool = currentTool;
     const pt = [round1(x), round1(y)];
@@ -5385,6 +5390,14 @@ function onDrawMove(e) {
     if (gPinch) return; // 핀치 중엔 그리기 무시
     if (!isDrawing) return;
     e.preventDefault();
+    // [신규] 펜이 닿은 뒤에 버튼을 눌러도(혹은 down에서 버튼 비트가 안 실려도) 이동 중 감지되면 지우개로 전환
+    if (!penForceErase && currentTool !== 'eraser' && isPenEraseSignal(e)) {
+        penForceErase = true;
+        curStroke = null;                 // 그리던 펜 획 폐기
+        const [px, py] = getDrawPos(e);
+        eraserPath = [[px, py]];
+        redrawStrokes();
+    }
     // 펜 입력의 중간 좌표(coalesced)를 모두 사용해 부드럽게 이어 그림
     const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
 
@@ -5743,11 +5756,10 @@ function studyGestureMove(e) {
         const dy = e.clientY - gScroll.y0;   // 아래로 끌면 +, 위로 끌면 −
         gScroll.sc.scrollTop = gScroll.top0 - dy;
         // 끝에서 한 번 더 당겼을 때만 바 표시 (갤럭시 빠른 설정처럼)
+        // 상단 바만 '끝에서 당기기'로 표시(하단 말씀 푸터는 메인화면 전용)
         if (!gScroll.revealed && !gPinch) {
             if ((!gScroll.scrollable || gScroll.atTop) && dy > CHROME_PULL) {
                 revealChrome('top'); gScroll.revealed = true;
-            } else if ((!gScroll.scrollable || gScroll.atBottom) && dy < -CHROME_PULL) {
-                revealChrome('bottom'); gScroll.revealed = true;
             }
         }
         if (e.cancelable) e.preventDefault();
