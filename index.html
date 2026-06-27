@@ -4227,6 +4227,14 @@ function toggleSidebar() {
         // 도우미를 열 때 현재 보고 있는 과정·일차로 즉시 동기화
         const d = document.getElementById('daySelect').value;
         if (bibleData[d]) syncSidebar(course, d);
+    } else {
+        // [수정] 닫을 때 floating 해제 — #sidebar.floating{display:flex!important} 때문에 X로 안 닫히던 문제
+        // (저장은 하지 않아 다시 열면 떠 있던 위치/크기 복원)
+        if (sb.classList.contains('floating')) {
+            sb.classList.remove('floating', 'dragging');
+            document.getElementById('appWrapper').classList.remove('has-floating');
+            sb.style.left = ''; sb.style.top = ''; sb.style.height = '';
+        }
     }
 }
 
