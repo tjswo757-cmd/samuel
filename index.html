@@ -728,6 +728,9 @@
         border: 1px solid #e0e0e0; overflow: visible;
     }
     .tool-popup.show { display: flex; }
+    /* [신규] 툴바가 화면 위쪽에 있어 팝업이 위로 넘칠 때 → 아래로 펼침 */
+    .tool-popup.drop-below { top: 0; bottom: auto; }
+    .tool-popup.drop-below::after { top: 24px; }
     
     /* 말풍선 꼬리 (왼쪽을 가리키도록) */
     .tool-popup::after {
@@ -4807,9 +4810,16 @@ function selectTool(toolName) {
     currentTool = toolName;
     btn.classList.add('active');
 
-    if (popup) popup.classList.add('show');
+    if (popup) { popup.classList.add('show'); positionToolPopup(popup); }
 
     updateCanvasInteractivity();
+}
+// [신규] 툴바 위치에 따라 옵션 팝업이 화면 위로 넘치면 아래로 펼치도록 보정
+function positionToolPopup(popup) {
+    if (!popup) return;
+    popup.classList.remove('drop-below');
+    const r = popup.getBoundingClientRect();
+    if (r.top < 8) popup.classList.add('drop-below');   // 위로 넘침 → 아래로
 }
 function closeAllPopups() { document.querySelectorAll('.tool-popup').forEach(p => p.classList.remove('show')); }
 function selectPreset(tool, color, btn) {
