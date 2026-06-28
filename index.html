@@ -1634,7 +1634,7 @@
                 <input type="range" id="tape-width" class="width-slider" min="12" max="52" value="26" oninput="updateSettings('tape','width',this.value)">
             </div>
             <div class="popup-row"><span class="popup-label">직선 그리기</span>
-                <label class="toggle-switch"><input type="checkbox" id="tape-straight" onchange="updateSettings('tape','straight',this.checked)"><span class="toggle-slider"></span></label>
+                <label class="toggle-switch"><input type="checkbox" id="tape-straight" checked onchange="updateSettings('tape','straight',this.checked)"><span class="toggle-slider"></span></label>
             </div>
             <div class="popup-row" onclick="recoverAllTape()" style="cursor:pointer; justify-content:center; border-top:1px solid #eee; padding-top:10px; margin-top:2px;">
                 <span class="popup-label" style="color:#2563eb;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>모두 다시 가리기</span>
@@ -4077,7 +4077,7 @@ let currentTool = 'pen';
 let settings = {
     pen: { color: 'black', width: 3, straight: false },
     highlighter: { color: '#f1c40f', width: 18, straight: false, opacity: 0.32 },
-    tape: { color: '#cbd5e1', width: 26, straight: false },
+    tape: { color: '#cbd5e1', width: 26, straight: true },
     eraser: { mode: 'stroke', width: 14 }
 };
 let isPenModeActive = false;
@@ -4588,6 +4588,8 @@ function loadPresets() {
         if (s && Array.isArray(s.list) && s.list.length) {
             penPresets = s.list; activePresetId = s.active || s.list[0].id; presetSeq = s.seq || (s.list.length + 1);
             if (!penPresets.some(p => p.id === activePresetId)) activePresetId = penPresets[0].id;
+            // 기존 저장 프리셋 마이그레이션: 테이프는 직선 기본 ON(한 번만 적용, 이후 사용자가 끈 상태는 유지)
+            penPresets.forEach(p => { if (p.tool === 'tape' && !p._si) { p.straight = true; p._si = true; } });
             return;
         }
     } catch (e) {}
@@ -5470,8 +5472,9 @@ function resizeDrawCanvas() {
 
 function applyStrokeStyle(s) {
     const ctx = drawCtx;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    // 테이프는 끝을 직각(평평)으로 끊음 — 펜/형광펜은 둥글게
+    ctx.lineCap = (s.t === 'tape') ? 'butt' : 'round';
+    ctx.lineJoin = (s.t === 'tape') ? 'miter' : 'round';
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = (s.t === 'highlighter') ? (s.o != null ? s.o : 0.32)
                     : (s.t === 'tape' && s.r) ? 0.16   // 가림 테이프를 탭하면 반투명 → 글자 비침
@@ -5750,16 +5753,22 @@ function onDrawUp(e) {
         } else {
             if (curStraight) densifyStraight(curStroke);
             strokes.push(curStroke);
-            // [신규] 글자 위에 그은 펜/형광펜이면 텍스트 하이라이트/밑줄로 변환 → 암송 도우미에도 반영
-            let textApplied = false;
-            if (curStroke.t === 'pen' || curStroke.t === 'highlighter') {
-                textApplied = tryApplyTextAnnotation(curStroke);
-            }
-            if (textApplied) {
-                strokes.pop();          // 텍스트에 반영했으니 캔버스 자유획은 제거(중복 방지)
-                strokeBefore = null;    // draw 히스토리 대신 text 히스토리로 기록됨
+            if (curStroke.t === 'tape') {
+                // 테이프는 글자 위에 대충 그어도 그 글자 줄에 딱 맞게 스냅(덮기) — 캔버스 획으로 유지(탭하면 가림/보임)
+                snapTapeToText(curStroke);
+                logStroke();
             } else {
-                logStroke();            // 빈 곳 자유필기 → 통계만 누적
+                // [신규] 글자 위에 그은 펜/형광펜이면 텍스트 하이라이트/밑줄로 변환 → 암송 도우미에도 반영
+                let textApplied = false;
+                if (curStroke.t === 'pen' || curStroke.t === 'highlighter') {
+                    textApplied = tryApplyTextAnnotation(curStroke);
+                }
+                if (textApplied) {
+                    strokes.pop();          // 텍스트에 반영했으니 캔버스 자유획은 제거(중복 방지)
+                    strokeBefore = null;    // draw 히스토리 대신 text 히스토리로 기록됨
+                } else {
+                    logStroke();            // 빈 곳 자유필기 → 통계만 누적
+                }
             }
         }
     }
@@ -5836,6 +5845,74 @@ function tryApplyTextAnnotation(stroke) {
 
     saveVerseStyle(vb, ref);
     if (window.getSelection) window.getSelection().removeAllRanges();
+    return true;
+}
+
+/* [신규] 테이프 획이 글자 위를 지나면 그 글자 줄에 '딱 맞는 직사각형'으로 스냅(덮기)
+   - 형광펜처럼 대충 그어도 글자에 바로 적용되는 느낌
+   - span 변환이 아니라 캔버스 테이프 획의 좌표/굵기만 보정 → 탭 가림/보임 그대로 동작
+   - 한 줄(같은 라인) 글자만 스냅(여러 줄/빈 곳은 그린 그대로 유지) → 실패해도 무해 */
+function snapTapeToText(stroke) {
+    if (!drawCanvas) return false;
+    const sa = document.getElementById('studyArea');
+    if (!sa || sa.style.display !== 'block') return false;
+    const rect = drawCanvas.getBoundingClientRect();
+    const pts = stroke.p;
+    if (pts.length < 2) return false;
+
+    const prevPE = drawCanvas.style.pointerEvents;
+    drawCanvas.style.pointerEvents = 'none'; // 글자를 직접 hit-test
+    const caretAt = (p) => {
+        const cx = rect.left + p[0], cy = rect.top + p[1];
+        if (document.caretRangeFromPoint) return document.caretRangeFromPoint(cx, cy);
+        if (document.caretPositionFromPoint) {
+            const cp = document.caretPositionFromPoint(cx, cy);
+            if (cp) { const r = document.createRange(); r.setStart(cp.offsetNode, cp.offset); r.collapse(true); return r; }
+        }
+        return null;
+    };
+    const valid = [];
+    for (const p of pts) {
+        const r = caretAt(p);
+        if (!r) continue;
+        const node = r.startContainer;
+        if (node.nodeType !== 3) continue;
+        const vb = node.parentElement && node.parentElement.closest('.verse-body-text');
+        if (!vb) continue;
+        valid.push({ r, vb });
+    }
+    drawCanvas.style.pointerEvents = prevPE;
+
+    if (valid.length < 2 || valid.length < pts.length * 0.5) return false;
+    const vb = valid[0].vb;
+    const same = valid.filter(v => v.vb === vb);
+    if (same.length < 2) return false;
+
+    let s = same[0].r, en = same[same.length - 1].r;
+    try {
+        if (s.compareBoundaryPoints(Range.START_TO_START, en) > 0) { const t = s; s = en; en = t; }
+    } catch (err) { return false; }
+    const range = document.createRange();
+    try {
+        range.setStart(s.startContainer, s.startOffset);
+        range.setEnd(en.startContainer, en.startOffset);
+    } catch (err) { return false; }
+    if (range.collapsed) return false;
+
+    const rects = range.getClientRects();
+    if (!rects.length) return false;
+    // 여러 줄에 걸치면 스냅하지 않음(빈 칸까지 덮는 오류 방지)
+    const top0 = rects[0].top;
+    for (const rr of rects) { if (Math.abs(rr.top - top0) > 4) return false; }
+
+    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    for (const rr of rects) { left = Math.min(left, rr.left); right = Math.max(right, rr.right); top = Math.min(top, rr.top); bottom = Math.max(bottom, rr.bottom); }
+    const pad = 1;
+    const yc = (top + bottom) / 2 - rect.top;
+    const x1 = left - rect.left - pad, x2 = right - rect.left + pad;
+    stroke.w = Math.max((bottom - top) + 4, 12); // 글자 높이를 덮을 만큼 두껍게
+    stroke.p = [[round1(x1), round1(yc)], [round1(x2), round1(yc)]];
+    densifyStraight(stroke);
     return true;
 }
 
