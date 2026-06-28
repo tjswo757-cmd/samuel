@@ -707,8 +707,9 @@
     .ft-add { border: 1.5px dashed #cfd6df; }
 
     /* 펜 옵션 팝업 — 종류 토글 / 사용자 색 */
-    .opt-seg { display: flex; gap: 6px; flex: 1; }
-    .opt-seg button { flex: 1; padding: 6px 8px; border: 1.5px solid #e0e0e0; background: #fff; border-radius: 9px; font-weight: 700; font-size: 0.82rem; cursor: pointer; color: #555; white-space: nowrap; }
+    .opt-seg { display: flex; gap: 5px; flex: 1; }
+    .opt-seg button { flex: 1; padding: 6px 4px; border: 1.5px solid #e0e0e0; background: #fff; border-radius: 9px; font-weight: 700; font-size: 0.78rem; cursor: pointer; color: #555; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; }
+    .opt-seg .btn-ico { margin-right: 3px; }
     .opt-seg button.active { background: #e8f4fd; border-color: var(--primary); color: var(--primary); }
     .opt-color-input { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; border: none; border-radius: 50%; padding: 0; background: none; cursor: pointer; flex-shrink: 0; }
     .opt-color-input::-webkit-color-swatch-wrapper { padding: 0; }
@@ -1679,6 +1680,7 @@
         <div class="opt-seg">
             <button id="optTypePen" onclick="setPresetType('pen')"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>펜</button>
             <button id="optTypeHl" onclick="setPresetType('highlighter')"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>형광펜</button>
+            <button id="optTypeTape" onclick="setPresetType('tape')"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="6" rx="1.2"/><path d="M6 9 4.5 15"/><path d="M11.5 9 10 15"/><path d="M17 9l-1.5 6"/></svg>테이프</button>
         </div>
     </div>
     <div class="popup-row opt-color-row"><span class="popup-label">색</span>
@@ -1695,6 +1697,10 @@
     </div>
     <div class="popup-row"><span class="popup-label">손가락으로도 그리기</span>
         <label class="toggle-switch"><input type="checkbox" class="finger-draw-check" onchange="toggleFingerDraw(this.checked)"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="popup-row" id="opt-tape-hint" style="display:none; font-size:.74rem; color:#8a93a0; justify-content:center; text-align:center; line-height:1.4;">글자 위에 그으면 가려지고,<br>가린 곳을 탭(클릭)하면 잠깐 보여요</div>
+    <div class="popup-row" id="opt-recover-row" onclick="recoverAllTape()" style="display:none; cursor:pointer; justify-content:center; border-top:1px solid #eee; padding-top:10px;">
+        <span class="popup-label" style="color:#2563eb;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>모두 다시 가리기</span>
     </div>
     <div class="popup-row" id="opt-delete-row" onclick="deleteActivePreset()" style="cursor:pointer; justify-content:center; border-top:1px solid #eee; padding-top:10px; color:#e74c3c; font-weight:700;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>이 펜 삭제</div>
 </div>
@@ -4568,6 +4574,7 @@ window.addEventListener('resize', clampToolbarPos);
 let penPresets = null, activePresetId = null, presetSeq = 7;
 const penPalette = ['#1a1a1a', '#e74c3c', '#2563eb', '#2ecc71', '#e67e22', '#9b59b6'];
 const hlPalette  = ['#f1c40f', '#a3e635', '#ff7ab3', '#5ec8ff', '#ffd24d', '#b388ff'];
+const tapePalette = ['#cbd5e1', '#ffffff', '#e8e0cf', '#1a1a1a', '#fde68a', '#bbf7d0', '#fbcfe8', '#bfdbfe'];
 function defaultPresets() {
     return [
         { id: 'p1', tool: 'pen', color: '#1a1a1a', width: 3, straight: false },
@@ -4594,6 +4601,11 @@ function savePresets() {
 }
 function activePreset() { if (!penPresets) loadPresets(); return penPresets.find(p => p.id === activePresetId); }
 function presetIconSVG(p) {
+    if (p.tool === 'tape') {
+        const dark = ['#1a1a1a', '#000', '#000000'].includes(String(p.color).toLowerCase());
+        const stroke = dark ? '#cbd5e1' : '#6b7480';
+        return `<svg class="ft-pen-ico" viewBox="0 0 24 24" width="20" height="24" fill="none"><rect x="2.5" y="8" width="19" height="8" rx="1.4" fill="${p.color}" stroke="${stroke}" stroke-width="1"/><path d="M6 8 4.5 16M11.5 8 10 16M17 8l-1.5 8" stroke="${stroke}" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+    }
     if (p.tool === 'highlighter')
         return `<svg class="ft-pen-ico" viewBox="0 0 22 26" width="20" height="24" fill="none"><rect x="5" y="3" width="12" height="10" rx="2" fill="#dbe2ea"/><path d="M5 13h12v4.2l-1.8 3H6.8l-1.8-3z" fill="${p.color}"/></svg>`;
     return `<svg class="ft-pen-ico" viewBox="0 0 22 26" width="20" height="24" fill="none"><rect x="7" y="3" width="8" height="12.5" rx="2.5" fill="#c8d0da"/><path d="M7 15.5h8l-3.1 6.3a.9.9 0 0 1-1.8 0z" fill="${p.color}"/></svg>`;
@@ -4603,7 +4615,7 @@ function renderPresets() {
     if (!host) return;
     if (!penPresets) loadPresets();
     host.innerHTML = penPresets.map(p =>
-        `<button class="flex-tool-btn ft-preset${(p.id === activePresetId && isDrawTool(currentTool) && currentTool === p.tool) ? ' active' : ''}" data-id="${p.id}" onclick="onPresetClick('${p.id}')" title="${p.tool === 'highlighter' ? '형광펜' : '펜'} (한번 더 누르면 옵션)">${presetIconSVG(p)}</button>`
+        `<button class="flex-tool-btn ft-preset${(p.id === activePresetId && isDrawTool(currentTool) && currentTool === p.tool) ? ' active' : ''}" data-id="${p.id}" onclick="onPresetClick('${p.id}')" title="${p.tool === 'highlighter' ? '형광펜' : p.tool === 'tape' ? '가림 테이프' : '펜'} (한번 더 누르면 옵션)">${presetIconSVG(p)}</button>`
     ).join('');
 }
 function applyPresetToSettings(p) {
@@ -4612,6 +4624,12 @@ function applyPresetToSettings(p) {
     settings[p.tool].width = p.width;
     settings[p.tool].straight = !!p.straight;
     if (p.tool === 'highlighter') settings.highlighter.opacity = (p.opacity != null ? p.opacity : 0.32);
+}
+/* 종류별 굵기 범위(슬라이더) — 펜 1~14, 형광펜 8~40, 테이프 12~52 */
+function widthRangeFor(tool) {
+    if (tool === 'highlighter') return [8, 40];
+    if (tool === 'tape') return [12, 52];
+    return [1, 14];
 }
 function selectPresetById(id) {
     const p = penPresets.find(x => x.id === id); if (!p) return;
@@ -4637,7 +4655,11 @@ function addNewPen() {
 function setPresetType(tool) {
     const p = activePreset(); if (!p) return;
     p.tool = tool;
-    if (tool === 'highlighter') { if (p.opacity == null) p.opacity = 0.32; if (!p.width || p.width < 8) p.width = 18; }
+    if (tool === 'highlighter') { if (p.opacity == null) p.opacity = 0.32; if (!p.width || p.width < 8 || p.width > 40) p.width = 18; }
+    else if (tool === 'tape') {
+        if (!p.width || p.width < 12) p.width = 26;       // 테이프는 두툼하게
+        if (p.color === '#1a1a1a' || p.color === 'black') p.color = '#cbd5e1'; // 글자색이면 가림용 회색으로
+    }
     else { if (p.width > 14) p.width = 3; }
     applyPresetToSettings(p);
     renderPresets(); savePresets(); updateCanvasInteractivity();
@@ -4670,7 +4692,7 @@ function sameColor(a, b) {
 function renderOptColors(p) {
     const grid = document.getElementById('opt-colors');
     if (!grid) return;
-    const pal = p.tool === 'highlighter' ? hlPalette : penPalette;
+    const pal = p.tool === 'highlighter' ? hlPalette : p.tool === 'tape' ? tapePalette : penPalette;
     const custVal = /^#[0-9a-fA-F]{6}$/.test(p.color) ? p.color : '#000000';
     grid.innerHTML = pal.map(c => `<div class="color-dot${sameColor(c, p.color) ? ' selected' : ''}" style="background:${c}" onclick="setActivePresetColor('${c}')"></div>`).join('')
         + `<label class="color-more-btn" title="사용자 색"><input type="color" id="opt-custom" value="${custVal}" onchange="setActivePresetColor(this.value)" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:none; padding:0;">+</label>`;
@@ -4686,12 +4708,20 @@ function openPenOptions() {
     const p = activePreset(); if (!pop || !p) return;
     document.getElementById('optTypePen').classList.toggle('active', p.tool === 'pen');
     document.getElementById('optTypeHl').classList.toggle('active', p.tool === 'highlighter');
+    const tapeBtn = document.getElementById('optTypeTape');
+    if (tapeBtn) tapeBtn.classList.toggle('active', p.tool === 'tape');
     renderOptColors(p);
     const w = document.getElementById('opt-width');
-    if (p.tool === 'highlighter') { w.min = 8; w.max = 40; } else { w.min = 1; w.max = 14; }
+    const [wmin, wmax] = widthRangeFor(p.tool); w.min = wmin; w.max = wmax;
     w.value = p.width;
     document.getElementById('opt-opacity-row').style.display = p.tool === 'highlighter' ? 'flex' : 'none';
     document.getElementById('opt-opacity').value = Math.round((p.opacity != null ? p.opacity : 0.32) * 100);
+    // 테이프 전용 행(안내 + 모두 다시 가리기)은 테이프일 때만 표시
+    const isTape = p.tool === 'tape';
+    const hintRow = document.getElementById('opt-tape-hint');
+    const recRow = document.getElementById('opt-recover-row');
+    if (hintRow) hintRow.style.display = isTape ? 'flex' : 'none';
+    if (recRow) recRow.style.display = isTape ? 'flex' : 'none';
     document.getElementById('opt-straight').checked = !!p.straight;
     pop.querySelectorAll('.finger-draw-check').forEach(c => c.checked = (localStorage.getItem('fingerDraw') === '1'));
     document.getElementById('opt-delete-row').style.display = penPresets.length > 1 ? 'flex' : 'none';
