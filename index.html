@@ -506,6 +506,7 @@
     body.study-immersive #studyZoomCtl { display: flex; opacity: 0; pointer-events: none; }       /* 평소엔 숨김 */
     body.study-immersive #studyZoomCtl.visible { opacity: 1; pointer-events: auto; }               /* 확대 동작 중에만 표시 */
     body.study-immersive.reveal-top #studyZoomCtl { top: 82px; }   /* 헤더 나타나면 그 아래로 → 안 가림 */
+    body.study-immersive.reveal-top .study-floating-nav { top: 124px; }  /* 일차 네비도 헤더 아래로(배너·확대컨트롤 안 가림) */
     .szc-btn, .szc-lock { width: 30px; height: 30px; border: none; background: #f3f5f8; border-radius: 50%; cursor: pointer; font-size: 17px; font-weight: 700; color: #444; display: flex; align-items: center; justify-content: center; line-height: 1; }
     .szc-btn:hover, .szc-lock:hover { background: #e7ebf0; }
     .szc-lock.locked { background: #e8f4fd; }
@@ -4474,12 +4475,19 @@ function saveToolbarPos() {
     if (!tb || !tb.style.left || !tb.style.top) return;
     try { localStorage.setItem(TOOLBAR_POS_KEY, JSON.stringify({ left: parseInt(tb.style.left) || 0, top: parseInt(tb.style.top) || 0 })); } catch (e) {}
 }
+// 상단 헤더(배너) 높이 + 여백 → 툴바·네비가 이 위로 못 올라오게 하는 안전선
+function topSafeInset() {
+    const gh = document.getElementById('globalHeader');
+    let h = gh ? gh.offsetHeight : 0;
+    if (!h) h = 70;
+    return h + 6;
+}
 function clampToolbarPos() {
     const tb = document.getElementById('flexToolbar');
     if (!tb || !tb.style.left) return;
     let l = parseInt(tb.style.left) || 0, t = parseInt(tb.style.top) || 0;
     l = Math.max(4, Math.min(l, window.innerWidth - tb.offsetWidth - 4));
-    t = Math.max(4, Math.min(t, window.innerHeight - tb.offsetHeight - 4));
+    t = Math.max(topSafeInset(), Math.min(t, window.innerHeight - tb.offsetHeight - 4));
     tb.style.left = l + 'px'; tb.style.top = t + 'px';
 }
 // 현재 화면상 위치를 인라인 좌표(left/top)로 고정 → 방향 전환·리사이즈 후에도 클램프가 항상 동작
@@ -4545,7 +4553,7 @@ function toggleToolbarMinimized() {
         e.preventDefault();
         let l = ol + (e.clientX - sx), t = ot + (e.clientY - sy);
         l = Math.max(4, Math.min(l, window.innerWidth - tb.offsetWidth - 4));
-        t = Math.max(4, Math.min(t, window.innerHeight - tb.offsetHeight - 4));
+        t = Math.max(topSafeInset(), Math.min(t, window.innerHeight - tb.offsetHeight - 4));
         tb.style.left = l + 'px'; tb.style.top = t + 'px';
     });
     const end = e => { if (!drag) return; drag = false; try { h.releasePointerCapture(e.pointerId); } catch (_) {} saveToolbarPos(); };
