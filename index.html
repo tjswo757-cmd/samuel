@@ -1212,6 +1212,12 @@
     .sd-note { padding-left: 16px; margin: 4px 0 4px 14px; border-left: 2px dashed #d3dae3; color: #5b6675; font-size: 0.92em; line-height: 1.5; }
 
     /* 도해(다이어그램) 박스 */
+    /* 대본 실제 삽화(원본 PNG에서 잘라낸 지도·방주·인체 등) */
+    .sd-fig { display: block; max-width: 100%; height: auto; margin: 18px auto; border-radius: 10px; background: #fff; box-shadow: 0 2px 12px rgba(15,30,60,0.10); }
+    .sd-fig.sd-fig-sm { max-width: 360px; }
+    .sd-fig.sd-fig-md { max-width: 560px; }
+    .sd-fig.sd-fig-lg { max-width: 820px; }
+    [data-theme="dark"] .sd-fig { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
     .sd-figure { border: 1.5px dashed #c3ccd6; border-radius: 12px; padding: 16px; margin: 16px 0; background: #fafbfc; }
     .sd-figure-title { font-weight: 800; color: #5b6675; font-size: 0.85em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
     .sd-figure-title::before { content: "▣"; color: #9aa6b3; }
@@ -2748,8 +2754,8 @@ let undoStack = [];
 let redoStack = [];
 let currentScriptIndex = 0; // 0부터 11까지 (총 12페이지)
 const totalScriptPages = 12;
-// 대본 렌더 모드: 'image'=원본 PNG(기본, 원본과 최대한 동일) / 'html'=선명 재현(반응형·다크)
-let scriptRenderMode = (localStorage.getItem('scriptRenderMode') === 'html') ? 'html' : 'image';
+// 대본 렌더 모드: 'html'=텍스트 재현+실제 삽화(기본, 한 페이지) / 'image'=원본 PNG
+let scriptRenderMode = (localStorage.getItem('scriptRenderMode') === 'image') ? 'image' : 'html';
 function toggleScriptRenderMode(){
     scriptRenderMode = (scriptRenderMode === 'image') ? 'html' : 'image';
     try { localStorage.setItem('scriptRenderMode', scriptRenderMode); } catch(e){}
@@ -6522,19 +6528,7 @@ const scriptHtmlData = {
           <div class="sd-item">사람은 영원을 사모하는 마음이 있으므로, 외적인 조건이 충족되어도 만족이 없음<span class="sd-ref">전 3:11</span></div>
           <div class="sd-item">죽음이 끝이 아니고 영원한 세계가 있으므로, 천국에 가기 위해 거듭나야 함<span class="sd-ref">요 3:3</span></div>
         </div></div>
-        <div class="sd-diagram">
-          <div class="sd-circles">
-            <span class="sd-circle-label" style="top:7%; font-size:0.95em;">몸</span>
-            <span class="sd-circle-label" style="top:27%; color:#2f6fb0; text-shadow:none; font-size:0.85em;">혼</span>
-            <span class="sd-circle-label" style="top:45%; font-size:0.85em;">영</span>
-            <div class="ring-soul"><div class="ring-spirit"></div></div>
-          </div>
-          <div class="sd-legend">
-            <div class="sd-legend-item"><span class="sd-legend-dot body"></span><div><h4>몸 (BODY)</h4><p>영혼을 담는 그릇. 인간의 기본적 욕구를 갖고 있음 (성욕, 식욕, 수면욕 등등)</p></div></div>
-            <div class="sd-legend-item"><span class="sd-legend-dot soul"></span><div><h4>혼 (SOUL)</h4><p>사람의 지성을 담당하고 있음. 지적인 욕구를 갖고 있음.</p></div></div>
-            <div class="sd-legend-item"><span class="sd-legend-dot spirit"></span><div><h4>영 (SPIRIT)</h4><p>사람에게 있는 '하나님의 형상'. 영원히 살고자 하는 욕구를 갖고 있음</p></div></div>
-          </div>
-        </div>
+        <img class="sd-fig sd-fig-lg" src="fig-1-soul.webp" alt="사람의 구성: 몸(BODY)·혼(SOUL)·영(SPIRIT) 동심원" loading="lazy">
       </div>
     </div>
     `,
@@ -6561,11 +6555,11 @@ const scriptHtmlData = {
           <div class="sd-sub">현세가 전부라고 고집하는 사람은 잘 되도록 내어버려 두기도 하심<span class="sd-ref">욥 12:6, 욥 21:13</span></div>
           <div class="sd-sub">내세의 축복과 영혼을 위해 고통을 잠시 허락하기도 하심<span class="sd-ref">애 3:33, 사 38:17</span></div>
         </div></div>
-        <div class="sd-figure"><div class="sd-figure-title">통치자 하나님 — 인류의 역사</div>
-          <div class="sd-row"><span class="sd-pill">영원</span><span class="arrow">‹</span><span class="sd-pill">과거</span><span class="sd-pill">통치자 하나님</span><span class="sd-pill">미래</span><span class="arrow">›</span><span class="sd-pill">영원</span></div>
-          <div class="sd-note">성경의 하나님만 역사의 과거부터 미래를 정확히 진술</div>
-          <div class="sd-note">성경의 하나님만 문자 그대로 복과 화를 내리심</div>
+        <div class="sd-bracket">
+          <div class="sd-item">성경의 하나님만 역사의 <b>과거부터 미래</b>를 정확히 진술</div>
+          <div class="sd-item">성경의 하나님만 <b>문자 그대로</b> 복과 화를 내리심</div>
         </div>
+        <img class="sd-fig sd-fig-lg" src="fig-2-timeline.webp" alt="통치자 하나님 — 인류의 역사 타임라인" loading="lazy">
         <div class="sd-key">하나님이 통치자로서 인간이 악을 행할 때 심판을 정말 집행하시는가?</div>
       </div>
 
@@ -6580,9 +6574,7 @@ const scriptHtmlData = {
           <div class="sd-note"><b>위치</b> : 정확한 위치를 진술함. 실제로 두 강은 지금도 남아 있고 나머지 두 강은 화석화된 채 발견됨<span class="sd-ref">창 2:8, 창 2:10-14</span></div>
           <div class="sd-note"><b>석유</b> : 에덴동산이 지하에 내려갔다고 진술하는데, 그 자리에서 전세계 석유의 70% 이상이 나옴<span class="sd-ref">겔 31:18</span></div>
         </div></div>
-        <div class="sd-figure"><div class="sd-figure-title">에덴동산 위치 (지도)</div>
-          <div class="sd-chips"><span class="sd-chip">지중해</span><span class="sd-chip">홍해</span><span class="sd-chip">힛데겔</span><span class="sd-chip">기혼</span><span class="sd-chip">유브라데</span><span class="sd-chip">비손</span><span class="sd-chip">페르시아만</span><span class="sd-chip"><b>에덴동산 위치</b></span></div>
-        </div>
+        <img class="sd-fig sd-fig-md" src="fig-2-map.webp" alt="에덴동산 위치 지도 (지중해·유브라데·힛데겔·기혼·비손·페르시아만)" loading="lazy">
         <div class="sd-key">아담 이후 세대가 거듭할수록 지구 상의 죄가 증가</div>
 
         <div class="sd-branch"><div class="sd-branch-label" style="background:#2b3440;color:#fff;">Ⓑ</div><div class="sd-branch-body">
@@ -6599,9 +6591,7 @@ const scriptHtmlData = {
           <div class="sd-note">지구 전체에 걸쳐 존재하는 거대한 화석묘지는 생물들이 홍수에 의해 갑작스럽게 매장되었음을 입증<span class="sd-ref">창 7:22</span></div>
           <div class="sd-note">내륙지방에 있는 소금호수는 전 세계적으로 땅에 물이 창일 했음을 입증<span class="sd-ref">창 7:24</span></div>
         </div></div>
-        <div class="sd-figure"><div class="sd-figure-title">노아의 방주 (규격)</div>
-          <div class="sd-chips"><span class="sd-chip">길이 <b>300규빗</b></span><span class="sd-chip">폭 <b>50규빗</b></span><span class="sd-chip">높이 <b>30규빗</b></span></div>
-        </div>
+        <img class="sd-fig sd-fig-lg" src="fig-2-ark.webp" alt="노아의 방주 규격 (길이 300규빗·폭 50규빗·높이 30규빗)" loading="lazy">
         <div class="sd-key">대홍수를 경험한지 얼마 지나지 않아 인간은 또 다시 타락</div>
 
         <div class="sd-branch"><div class="sd-branch-label" style="background:#2b3440;color:#fff;">Ⓒ</div><div class="sd-branch-body">
@@ -6658,6 +6648,7 @@ const scriptHtmlData = {
           <div class="sd-item">홍해가 갈라져 이스라엘은 통과하고 애굽 군대는 물에 빠져 죽음<span class="sd-ref">출 14:21-25</span></div>
           <div class="sd-note">증거 ① 홍해를 건넌 지점이 밝혀졌는데(누웨이바), 이 지점이 바람에 의해 바다가 갈라질 수 있는 유일한 지형</div>
           <div class="sd-note">증거 ② 홍해바다 밑에서 출애굽 당시 애굽 병거 바퀴 잔해를 발견</div>
+          <img class="sd-fig sd-fig-sm" src="fig-3-redsea.webp" alt="홍해를 건넌 지점(누웨이바)의 해저 지형" loading="lazy">
           <div class="sd-item">홍해를 통과한 이스라엘 민족은 40년간 광야에서 하나님의 보호를 체험</div>
           <div class="sd-note">증거 ① 하나님이 불꽃 중에 강림하신 시내산 발견<span class="sd-ref">신 4:11-12</span></div>
           <div class="sd-note">증거 ② 시내산 근처에서 므리바 반석 발견<span class="sd-ref">출 17:6-7</span></div>
@@ -6755,10 +6746,8 @@ const scriptHtmlData = {
           <div class="sd-item">지상재림<span class="sd-ref">슥 14:4</span></div>
           <div class="sd-sub">7년 환난 끝에 주님이 성도들과 함께 감람산에 오시는 사건</div>
         </div></div>
-        <div class="sd-figure"><div class="sd-figure-title">참고 — 역사의 시대적 구분</div>
-          <div class="sd-row"><span class="sd-pill">아담</span><span class="arrow">›</span><span class="sd-pill">노아</span><span class="arrow">›</span><span class="sd-pill">바벨탑</span><span class="arrow">›</span><span class="sd-pill">아브라함</span><span class="arrow">›</span><span class="sd-pill">공중재림 (부활·휴거)</span><span class="arrow">›</span><span class="sd-pill">지상재림</span><span class="arrow">›</span><span class="sd-pill">심판</span></div>
-          <div class="sd-chips" style="margin-top:8px;"><span class="sd-chip">양심시대</span><span class="sd-chip">선민시대 (불순종한 이스라엘의 역사)</span><span class="sd-chip">은혜시대</span><span class="sd-chip">3년 반</span><span class="sd-chip">3년 반</span></div>
-        </div>
+        <div class="sd-figure-title" style="margin:16px 0 0;">참고 — 역사의 시대적 구분</div>
+        <img class="sd-fig sd-fig-lg" src="fig-4-timeline.webp" alt="역사의 시대적 구분: 아담·노아·바벨탑·아브라함·십자가·공중재림·지상재림·심판 (양심·선민·은혜시대·3년반·3년반)" loading="lazy">
         <div class="sd-bracket">
           <div class="sd-item">징조는 볼 수 있을지라도 주님이 재림하시는 날은 하나님의 권한이기에 알 수 없음<span class="sd-ref">마 24:36</span></div>
           <div class="sd-item">그리스도인들은 자신의 위치에서 최선의 삶을 사는 가운데 주님을 맞아야 함<span class="sd-ref">눅 17:34-35</span></div>
@@ -6830,9 +6819,8 @@ const scriptHtmlData = {
           <div class="sd-note">교만 / 고집과 음란 / 욕심 / 사나움 / 간사함 / 비방 / 기회주의</div>
           <div class="sd-item">마음이 제어가 안되기 때문에 행위로 나타남</div>
         </div>
-        <div class="sd-figure"><div class="sd-figure-title">행위로 나타나는 죄</div>
-          <div class="sd-chips"><span class="sd-chip">눈<span class="sd-ref">벧후 2:14</span></span><span class="sd-chip">손<span class="sd-ref">사 59:3</span></span><span class="sd-chip">발<span class="sd-ref">사 59:7</span></span><span class="sd-chip">혀<span class="sd-ref">약 3:6</span></span></div>
-        </div>
+        <div class="sd-figure-title" style="margin:16px 0 0;">행위로 나타나는 죄</div>
+        <img class="sd-fig sd-fig-sm" src="fig-5-body.webp" alt="죄가 나타나는 몸의 부위: 눈(벧후 2:14)·혀(약 3:6)·손(사 59:3)·발(사 59:7)" loading="lazy">
         <div class="sd-key">마음과 행동으로 죄를 짓다가 죽게 됨</div>
       </div>
 
@@ -6942,11 +6930,8 @@ const scriptHtmlData = {
     <div class="sd-page">
       <div class="sd-section">
         <div class="sd-flow"><div class="sd-qbox"><span class="sd-qtag">의문제기</span><div class="sd-qbody">어떻게 하나님의 공의와 사랑이 조화 되는가?</div></div></div>
-        <div class="sd-figure"><div class="sd-figure-title">하나님의 속성</div>
-          <div class="sd-row"><span class="sd-pill">공의<span class="sd-ref">요일 1:5</span></span><span class="arrow">›</span><span class="sd-pill">율법</span><span class="arrow">›</span><span class="sd-pill">심판</span></div>
-          <div class="sd-row" style="margin-top:6px;"><span class="sd-pill">사랑<span class="sd-ref">요일 4:16</span></span><span class="arrow">›</span><span class="sd-pill">은혜</span><span class="arrow">›</span><span class="sd-pill">용서</span></div>
-          <div class="sd-note">죽음으로 죄 값을 치르는 것이 공의 / 예수님이 나를 대신해 죽은 것이 사랑</div>
-        </div>
+        <img class="sd-fig sd-fig-lg" src="fig-6-attr.webp" alt="하나님의 속성: 공의(요일 1:5)→율법→심판 / 사랑(요일 4:16)→은혜→용서 → 십자가에서 조화" loading="lazy">
+        <div class="sd-note" style="text-align:center;">죽음으로 죄 값을 치르는 것이 <b>공의</b> / 예수님이 나를 대신해 죽은 것이 <b>사랑</b></div>
         <div class="sd-key">십자가에서 공의와 사랑이 조화됨</div>
       </div>
 
@@ -6957,11 +6942,7 @@ const scriptHtmlData = {
           <div class="sd-sub">따라서 예수님 안에서 모든 사람의 죄가 해결될 수 있음<span class="sd-ref">롬 5:18-19</span></div>
           <div class="sd-item">② 그리스도의 생명은 다른 모든 사람의 생명을 전부 합친 것보다 큰 가치를 지님</div>
         </div>
-        <div class="sd-twocol">
-          <div class="sd-box"><div class="sd-box-title">예수 그리스도의 생명</div></div>
-          <div class="sd-box"><div class="sd-box-title">이 세상 모든 사람의 생명</div></div>
-        </div>
-        <div class="sd-down">예수 그리스도의 생명 &gt; 이 세상 모든 사람의 생명</div>
+        <img class="sd-fig sd-fig-md" src="fig-6-life.webp" alt="예수 그리스도의 생명 > 이 세상 모든 사람의 생명" loading="lazy">
       </div>
 
       <div class="sd-section">
@@ -6975,9 +6956,7 @@ const scriptHtmlData = {
           <div class="sd-item">④ 영원히 죄를 사해 놔야 넘어져도 일어나는 힘이 있음</div>
           <div class="sd-item">⑤ 거듭난 사람은 결코 잃어지지 않음<span class="sd-ref">요 10:28</span></div>
         </div>
-        <div class="sd-figure"><div class="sd-figure-title">나 — 예수님 기준으로는 미래</div>
-          <div class="sd-chips"><span class="sd-chip">나</span><span class="sd-chip">과거</span><span class="sd-chip">미래</span></div>
-        </div>
+        <img class="sd-fig sd-fig-md" src="fig-6-future.webp" alt="예수님 기준으로는 나의 과거·현재·미래 죄가 모두 미래죄" loading="lazy">
         <div class="sd-branch"><div class="sd-branch-label">결론</div><div class="sd-branch-body">
           <div class="sd-item">다시 기억지 아니하리라<span class="sd-ref">히 10:17-18, 사 43:25, 사 44:22</span> → 더 이상 마귀의 정죄가 두렵지 않음</div>
           <div class="sd-item">구속 곧 죄 사함을 받았으니<span class="sd-ref">엡 1:7</span> → 현재완료형으로, 피로써 내 모든 죄는 이미 사해짐</div>
