@@ -228,6 +228,7 @@
     .menu-row.study .menu-row-ico { background: linear-gradient(135deg, #6dd5ed, #2193b0); }
     .menu-row.quiz .menu-row-ico { background: linear-gradient(135deg, #ff9966, #ff5e62); }
     .menu-row.plowing .menu-row-ico { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+    .menu-row.script .menu-row-ico { background: linear-gradient(135deg, #7b8df0, #5a4fd6); }
     .menu-row-text { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .menu-row-title { font-size: 1.15em; font-weight: 800; color: var(--secondary); }
     .menu-row-desc { font-size: 0.85em; color: #8a96a3; font-weight: 500; }
@@ -395,13 +396,40 @@
         pointer-events: none; /* 클릭은 아래 버튼들만 되게 */
     }
     .script-fullscreen-title { font-size: 1.2rem; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
-    .script-close-btn { 
+    .script-close-btn {
         pointer-events: auto;
         background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white;
         padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer;
         backdrop-filter: blur(5px);
     }
-    
+    .script-header-actions { display: flex; gap: 8px; align-items: center; pointer-events: none; }
+    .script-mode-btn {
+        pointer-events: auto;
+        background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.45); color: #fff;
+        padding: 8px 13px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+        backdrop-filter: blur(5px); white-space: nowrap;
+    }
+    .script-mode-btn:active { background: rgba(255,255,255,0.32); }
+    /* 대본 로딩 표시 */
+    .script-loading {
+        position: absolute; inset: 0; z-index: 1;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        color: #cfd6df; font-weight: 700; font-size: 0.95rem;
+    }
+    .script-spinner {
+        width: 38px; height: 38px; border-radius: 50%;
+        border: 4px solid rgba(255,255,255,0.25); border-top-color: #7b8df0;
+        animation: sdspin 0.8s linear infinite;
+    }
+    @keyframes sdspin { to { transform: rotate(360deg); } }
+    /* 선명(HTML) 모드 상단바의 추가 버튼 */
+    .sd-topbar button.sd-mode-btn { background: #5a4fd6; color: #fff; }
+    @media (max-width: 560px) {
+        .script-fullscreen-title { font-size: 1rem; }
+        .script-mode-btn { padding: 7px 10px; font-size: 0.82rem; }
+        .script-header-actions { gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+    }
+
     /* 일차 이동 플로팅 버튼 (하단 중앙) */
     .script-day-nav {
         position: absolute;
@@ -1794,6 +1822,11 @@
                             <span class="menu-row-text"><span class="menu-row-title">예시 밭갈이</span><span class="menu-row-desc">예시밭갈이와 밭갈이 만들기</span></span>
                             <span class="menu-row-arrow">›</span>
                         </button>
+                        <button class="menu-row script" onclick="selectRootMode('script')">
+                            <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span>
+                            <span class="menu-row-text"><span class="menu-row-title">대본 보기</span><span class="menu-row-desc">일차별 성경강연회 스토리보드(대본)</span></span>
+                            <span class="menu-row-arrow">›</span>
+                        </button>
                         <button class="menu-row stats" onclick="selectRootMode('stats')">
                             <span class="menu-row-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                             <span class="menu-row-text"><span class="menu-row-title">마이페이지</span><span class="menu-row-desc">나의 학습 기록과 수료 점수 계산</span></span>
@@ -2715,6 +2748,13 @@ let undoStack = [];
 let redoStack = [];
 let currentScriptIndex = 0; // 0부터 11까지 (총 12페이지)
 const totalScriptPages = 12;
+// 대본 렌더 모드: 'image'=원본 PNG(기본, 원본과 최대한 동일) / 'html'=선명 재현(반응형·다크)
+let scriptRenderMode = (localStorage.getItem('scriptRenderMode') === 'html') ? 'html' : 'image';
+function toggleScriptRenderMode(){
+    scriptRenderMode = (scriptRenderMode === 'image') ? 'html' : 'image';
+    try { localStorage.setItem('scriptRenderMode', scriptRenderMode); } catch(e){}
+    openScriptViewer(currentScriptIndex); // 현재 일차 그대로 다시 렌더
+}
 // [중요] 필기 버튼과 툴바 가시성 제어 함수 (수정됨)
 function updateFloatingUI(show, context = 'default') {
     const toolbar = document.getElementById('flexToolbar');
@@ -6961,6 +7001,37 @@ function showScriptList() {
     document.getElementById('scriptListContent').innerHTML = html;
     showStep('stepScriptList');
 }
+// [신규] 대본에서 해당 일차 암송 외우기로 바로 이동
+function openDayStudy(day){
+    const dv = document.getElementById('stepScriptViewer'); if (dv) dv.style.display = 'none';
+    const gh = document.getElementById('globalHeader'); if (gh) gh.classList.remove('header-hidden');
+    const af = document.querySelector('.app-footer'); if (af) af.classList.remove('footer-hidden');
+    document.querySelectorAll('.main-container .container').forEach(div => div.style.display = '');
+    if (!(course >= 1 && course <= 4)) course = parseInt(localStorage.getItem('lastCourse')) || 4;
+    const dsel = document.getElementById('daySelect');
+    if (dsel) {
+        if (dsel.options.length <= 1) dsel.innerHTML = '<option value="">-- 일차 선택 --</option>' + Object.keys(bibleData).map(d => `<option value="${d}">${d}</option>`).join('');
+        dsel.value = day + '일차';
+    }
+    if (bibleData[day + '일차']) startStudy();
+    else showStep('stepHome');
+}
+// [신규] 해당 일차 대본(원본 PNG 2장) 인쇄 — 별도 창으로 깔끔하게
+function printScript(day){
+    const u1 = new URL(`${day}-1.png`, location.href).href;
+    const u2 = new URL(`${day}-2.png`, location.href).href;
+    const w = window.open('', '_blank');
+    if (!w) { try { smAlert('팝업이 차단되어 인쇄할 수 없습니다. 팝업을 허용해 주세요.'); } catch(e){ alert('팝업을 허용해 주세요.'); } return; }
+    // 인쇄 창에는 스크립트를 넣지 않음(중첩 script 태그가 본문 파싱을 깨뜨릴 수 있음) → 부모에서 제어
+    w.document.write(`<!doctype html><html><head><meta charset="utf8"><title>${day}일차 대본</title>`
+      + `<style>@page{margin:6mm} html,body{margin:0;padding:0} img{width:100%;display:block} img+img{page-break-before:always}</style>`
+      + `</head><body><img src="${u1}"><img src="${u2}"></body></html>`);
+    w.document.close();
+    let n = 0;
+    const imgs = w.document.images;
+    const go = () => { if (++n >= imgs.length) { try { w.focus(); w.print(); } catch(e){} } };
+    for (const im of imgs) { if (im.complete) go(); else { im.onload = go; im.onerror = go; } }
+}
 function openScriptViewer(index) {
     // PC 화면(가로 768 초과)일 때 인덱스가 홀수(오른쪽 페이지)라면 짝수(왼쪽 페이지)로 강제 정렬
     const isPC = window.innerWidth > 768;
@@ -6976,14 +7047,16 @@ function openScriptViewer(index) {
     const day = Math.floor(index / 2) + 1;
     const part = (index % 2) + 1;
 
-    // [신규] HTML 재현 데이터가 있는 일차는 이미지 대신 선명한 텍스트 문서로 렌더링
-    if (scriptHtmlData[day]) {
+    // 선명 모드(html)일 때만 HTML 재현으로 렌더링 — 기본은 원본 PNG(아래)
+    if (scriptRenderMode === 'html' && scriptHtmlData[day]) {
         const prevBtn = day > 1 ? `<button onclick="openScriptViewer(${(day-2)*2})">◀ ${day-1}일차</button>` : '';
         const nextBtn = day < 6 ? `<button onclick="openScriptViewer(${day*2})">${day+1}일차 ▶</button>` : '';
         const htmlDoc = `
             <div class="sd-topbar no-print">
                 <div class="sd-topbar-title">${day}일차 대본</div>
                 <div class="sd-topbar-actions">
+                    <button class="sd-mode-btn" onclick="toggleScriptRenderMode()" title="원본 PNG로 보기">🖼 원본</button>
+                    <button onclick="openDayStudy(${day})" title="이 일차 암송 보기">📖 암송</button>
                     ${prevBtn}${nextBtn}
                     <button class="sd-close" onclick="goBack()">✖ 닫기</button>
                 </div>
@@ -6997,17 +7070,13 @@ function openScriptViewer(index) {
         return;
     }
 
-    // 화면 크기에 따라 로드할 이미지 결정
+    // 화면 크기에 따라 로드할 이미지 결정 — 가벼운 WebP 우선, 실패 시 원본 PNG로 폴백(빠른 로딩)
+    const imgTag = (d, p, alt) => `<img src="${d}-${p}.webp" onerror="this.onerror=null;this.src='${d}-${p}.png'" onload="scriptImgLoaded()" alt="${alt}" draggable="false" />`;
     let imgHtml = "";
     if (isPC) {
-        // PC: 1장, 2장을 동시에 렌더링
-        imgHtml = `
-            <img src="${day}-1.png" alt="${day}일차 1페이지" draggable="false" />
-            <img src="${day}-2.png" alt="${day}일차 2페이지" draggable="false" />
-        `;
+        imgHtml = imgTag(day, 1, `${day}일차 1페이지`) + imgTag(day, 2, `${day}일차 2페이지`);
     } else {
-        // 모바일: 해당 파트 1장만 렌더링
-        imgHtml = `<img src="${day}-${part}.png" alt="${day}일차 대본 ${part}" draggable="false" />`;
+        imgHtml = imgTag(day, part, `${day}일차 대본 ${part}`);
     }
 
     let prevDayHtml = day > 1 ? `<button class="script-day-btn" onclick="openScriptViewer(${(day-2)*2})">◀ ${day-1}일차</button>` : `<div style="width:80px"></div>`;
@@ -7016,13 +7085,21 @@ function openScriptViewer(index) {
     // 제목 표시: PC는 "N일차 대본", 모바일은 "N일차 대본 (1/2)"
     const titleText = isPC ? `${day}일차 대본` : `${day}일차 대본 <span style="font-size:0.8em; color:#ddd;">(${part}/2)</span>`;
 
+    const hasHtml = !!scriptHtmlData[day];
+    const sharpBtn = hasHtml ? `<button class="script-mode-btn" onclick="toggleScriptRenderMode()" title="선명한 텍스트 재현으로 보기">✨ 선명</button>` : '';
     let html = `
         <div class="script-fullscreen-header">
             <div class="script-fullscreen-title">${titleText}</div>
-            <button class="script-close-btn" onclick="goBack()">✖ 닫기</button>
+            <div class="script-header-actions">
+                ${sharpBtn}
+                <button class="script-mode-btn" onclick="openDayStudy(${day})" title="이 일차 암송 보기">📖 암송</button>
+                <button class="script-mode-btn" onclick="printScript(${day})" title="이 일차 대본 인쇄">🖨 인쇄</button>
+                <button class="script-close-btn" onclick="goBack()">✖ 닫기</button>
+            </div>
         </div>
-        
+
         <div id="scriptImageWrapper" class="script-viewer-container">
+            <div id="scriptLoading" class="script-loading"><div class="script-spinner"></div>대본 불러오는 중…</div>
             <div id="scriptTransformLayer" class="script-image-wrapper">
                 ${imgHtml}
             </div>
@@ -7037,8 +7114,18 @@ function openScriptViewer(index) {
     document.getElementById('scriptDetailContent').innerHTML = html;
     document.getElementById('stepScriptViewer').style.display = 'block';
 
-    updateFloatingUI(false); 
+    updateFloatingUI(false);
     initScriptSwipeAndZoom(isPC);
+    // 인접 일차 미리 받아두기(다음/이전 일차 열 때 즉시 표시)
+    preloadScriptDay(day - 1);
+    preloadScriptDay(day + 1);
+}
+// 이미지가 한 장이라도 로드되면 로딩 표시 숨김
+function scriptImgLoaded(){ const s = document.getElementById('scriptLoading'); if (s) s.style.display = 'none'; }
+// 인접 일차 WebP를 백그라운드로 미리 받아둠
+function preloadScriptDay(d){
+    if (d < 1 || d > 6) return;
+    for (let p = 1; p <= 2; p++){ const im = new Image(); im.src = `${d}-${p}.webp`; }
 }
 
 // 핀치 줌, 마우스 휠 줌 & 터치/마우스 스와이프 통합 제어 로직
@@ -7522,12 +7609,18 @@ function setupPresence(uid){
   }
 }
 
-// 집계 기준: 이 시간 안에 살아있다는 신호(하트비트)가 있어야 접속으로 셈. 하트비트보다 넉넉하게.
-const PRESENCE_WINDOW = 60000; // 60초
-const PRUNE_AGE = 120000;      // 2분 넘게 신호 없는(또는 시간값 없는) 항목은 DB에서 자동 삭제
+// 집계 기준: 이 시간 안에 살아있다는 신호(하트비트)가 있어야 접속으로 셈. 하트비트(150초)보다 넉넉하게.
+// [비용 최적화] 하트비트를 25초→150초로 늦춰 status 전파(N²) 트래픽을 ~6배 줄임. 정상 종료는 onDisconnect로 즉시 정리되고,
+//   이 윈도우/PRUNE은 비정상 종료(크래시) 유령만 처리하므로 넉넉히 잡아도 무방.
+const PRESENCE_WINDOW = 210000; // 3.5분 (하트비트 150초보다 길어야 살아있는 사용자가 안 빠짐)
+const PRUNE_AGE = 480000;       // 8분 넘게 신호 없는(또는 시간값 없는) 항목은 DB에서 자동 삭제
 let countSubscribed = false;
 let lastStatusEntries = [];    // 마지막으로 받은 status 목록(시간 경과 재계산용)
 let gotStatus = false;         // 첫 데이터 받기 전엔 '–' 유지
+// [대규모 비용 최적화 스위치] Cloud Function(functions/index.js)을 배포해 meta/onlineCount를 유지하면 true로 바꾸세요.
+//   true면 클라가 전체 status 목록을 구독하지 않고 '숫자 하나'(meta/onlineCount)만 읽음 → N² 트래픽 제거(동시 1000명도 사실상 무료).
+//   false(기본)면 기존 방식 그대로. 함수 미배포 상태에서 true로 두면 접속자수가 표시되지 않으니 주의.
+const USE_ONLINE_COUNTER = false;
 // 시간값 없는 유령 제외 + 최근 신호만 집계
 function renderCount(){
   if (!gotStatus) return;
@@ -7540,6 +7633,19 @@ function renderCount(){
 function subscribeCount(){
   if (countSubscribed) return;
   countSubscribed = true;
+  // [대규모 모드] Cloud Function이 유지하는 단일 카운터만 읽음 — 전체 목록 미구독(O(1), N² 트래픽 없음)
+  if (USE_ONLINE_COUNTER){
+    onValue(ref(db, 'meta/onlineCount'), (snap) => {
+      const v = snap.val();
+      gotStatus = true;
+      const el = document.getElementById('onlineCountNum');
+      if (el) el.textContent = (typeof v === 'number') ? Math.max(0, v) : 0;
+    }, (err) => {
+      countSubscribed = false;
+      setTimeout(() => { if (currentUser) subscribeCount(); }, 1500);
+    });
+    return;
+  }
   onValue(ref(db, 'status'), (snap) => {
     const now = Date.now();
     const arr = [], stale = [];
@@ -7561,8 +7667,8 @@ function subscribeCount(){
   });
 }
 
-// 살아있음을 주기적으로 갱신(heartbeat) — 25초마다
-setInterval(() => { if (presenceUid) goOnline(); }, 25000);
+// 살아있음을 주기적으로 갱신(heartbeat) — 150초(2.5분)마다 [비용 최적화: 25초→150초로 N² 전파 트래픽 ~6배↓]
+setInterval(() => { if (presenceUid) goOnline(); }, 150000);
 // 데이터 변화가 없어도, 시간이 지나 오래된(끊긴) 항목이 빠지는 것을 실시간 반영(3초마다 재계산)
 setInterval(renderCount, 3000);
 
