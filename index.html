@@ -1324,19 +1324,17 @@
         overflow: hidden;
         padding: 0;
     }
-    /* 한 일차의 여러 .sd-page(원본 좌/우 페이지)를 나란히 펼쳐 한 화면에 맞춤 */
+    /* 한 일차(병합된 .sd-page)를 화면에 맞춰 스케일 — inline-block으로 폭이 페이지에 딱 맞게 */
     .sd-viewport.sd-fit .sd-fitrow {
-        position: relative;
-        display: flex; flex-direction: row; align-items: flex-start;
-        gap: 22px;
+        position: absolute; top: 0; left: 0;
+        display: inline-block; vertical-align: top;
         transform-origin: top left;
         will-change: transform;
     }
-    .sd-viewport.sd-fit .sd-fitrow.sd-stack { flex-direction: column; align-items: stretch; }
     .sd-viewport.sd-fit .sd-fitrow .sd-page {
-        flex: 0 0 auto; margin: 0; max-width: none;
+        margin: 0; max-width: none;
     }
-    .sd-viewport.sd-fit .sd-fitrow .sd-page + .sd-page { margin-top: 0; }
+    .sd-viewport.sd-fit .sd-fitrow .sd-page + .sd-page { margin-top: 22px; }
     /* 페이지가 1장뿐인 일차는 그 페이지를 2단으로 나눠 가로를 채움 */
     .sd-viewport.sd-fit .sd-fitrow .sd-page.sd-2col { column-count: 2; column-gap: 40px; }
     .sd-viewport.sd-fit .sd-fitrow .sd-page.sd-2col .sd-day-header { column-span: all; }
@@ -7077,48 +7075,71 @@ function fitScriptToScreen() {
     if (!viewer || viewer.style.display !== 'block') return;
     const row = vp.querySelector('.sd-fitrow');
     if (!row) return;
-    const pages = row.querySelectorAll(':scope > .sd-page');
-    if (!pages.length) return;
+    const page = row.querySelector('.sd-page'); // 병합되어 1장
+    if (!page) return;
     const padX = 12, padTop = 58, padBot = 12;
     const availW = vp.clientWidth - padX * 2;
     const availH = vp.clientHeight - padTop - padBot;
     if (availW <= 0 || availH <= 0) return;
     const wide = vp.clientWidth > 820;
-    row.classList.toggle('sd-stack', !wide); // 좁은 화면은 세로로 쌓음
-    // 페이지가 1장뿐인 일차는 그 페이지를 2단으로 나눠 가로를 채움(여러 장이면 나란히 펼침)
-    const singlePage = pages.length === 1;
-    pages.forEach(p => p.classList.toggle('sd-2col', wide && singlePage));
+    page.classList.toggle('sd-2col', wide); // 넓은 화면은 2단
     row.style.transform = 'none';
-    // 다단/플렉스 모두에서 정확한 높이: 각 페이지 자식들의 실제 위치로 진짜 높이를 잰다
-    const measure = () => {
-        let h = row.offsetHeight;
-        pages.forEach(p => {
-            let ph = p.offsetHeight;
-            const kids = p.children;
-            for (let k = 0; k < kids.length; k++) ph = Math.max(ph, kids[k].offsetTop + kids[k].offsetHeight);
-            h = Math.max(h, ph);
-        });
-        return { w: row.offsetWidth, h: h };
-    };
-    // 페이지 1장 폭 후보 중 가장 큰 배율(=가장 크게 보이는)을 주는 폭 선택 → 화면을 최대한 채움
-    const pageWidths = wide
-        ? (singlePage ? [1000, 1200, 1380, 1560, 1740] : [560, 640, 720, 820, 920])
-        : [Math.min(880, vp.clientWidth - 24)];
-    let best = { scale: 0, w: pageWidths[0] };
-    for (const pw of pageWidths) {
-        pages.forEach(p => { p.style.width = pw + 'px'; });
+    const measure = () => ({ w: page.offsetWidth, h: page.offsetHeight });
+    // 페이지 폭을 여러 값으로 시도 → 화면을 가장 많이 채우는(짧은 축 채움률 최대) 폭 선택.
+    // 배율만 최대화하면 좁은 폭이 뽑혀 좌우 여백이 생기므로 "채움률"로 고른다.
+    // 삽화가 과하게 커지지 않도록 한 단(칼럼) 폭에 상한을 둔다.
+    const COLMAX = 980;
+    const maxW = wide ? (COLMAX * 2 + 42) : Math.min(920, vp.clientWidth - 20);
+    const candidates = wide
+        ? [0.65, 0.8, 0.95, 1.1, 1.25, 1.4].map(f => Math.min(availW * f, maxW))
+        : [maxW];
+    let best = { fill: -1, scale: 0, w: candidates[0] };
+    for (const w of candidates) {
+        page.style.width = w + 'px';
         const m = measure();
         if (!m.w || !m.h) continue;
         const s = Math.min(availW / m.w, availH / m.h);
-        if (s > best.scale) best = { scale: s, w: pw };
+        const fill = Math.min(m.w * s / availW, m.h * s / availH); // 짧은 축 채움률
+        if (fill > best.fill) best = { fill: fill, scale: s, w: w };
     }
-    pages.forEach(p => { p.style.width = best.w + 'px'; });
-    const scale = Math.max(0.3, Math.min(best.scale, 2.4));
+    page.style.width = best.w + 'px';
+    const scale = Math.max(0.3, Math.min(best.scale, 3.0));
     const m = measure();
-    // top-left 기준 좌표로 정확히 가운데 배치(플렉스 오버플로 이슈 회피)
+    // top-left 기준 좌표로 화면 가운데 배치
     const tx = padX + Math.max(0, (availW - m.w * scale) / 2);
     const ty = padTop + Math.max(0, (availH - m.h * scale) / 2);
     row.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+}
+// [신규] 한 일차가 여러 .sd-page(원본 좌/우)로 나뉘어 있으면 하나로 합침 → 2단 균형 배치로 화면을 꽉 채우기 위함
+function mergeScriptPages(dayHtml) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = dayHtml;
+    const srcPages = tmp.querySelectorAll('.sd-page');
+    if (srcPages.length <= 1) return dayHtml;
+    let inner = '';
+    srcPages.forEach(p => { inner += p.innerHTML; });
+    return '<div class="sd-page">' + inner + '</div>';
+}
+// [신규] 대본에서 좌우로 슬라이드(스와이프)하면 이전/다음 일차로 이동
+function initScriptSwipe(day) {
+    const vp = document.getElementById('sdViewport');
+    if (!vp) return;
+    let sx = 0, sy = 0, tracking = false;
+    const goNext = () => { if (day < 6) openScriptViewer(day * 2); };
+    const goPrev = () => { if (day > 1) openScriptViewer((day - 2) * 2); };
+    vp.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        sx = e.clientX; sy = e.clientY; tracking = true;
+    });
+    vp.addEventListener('pointerup', e => {
+        if (!tracking) return;
+        tracking = false;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+            if (dx < 0) goNext(); else goPrev();
+        }
+    });
+    vp.addEventListener('pointercancel', () => { tracking = false; });
 }
 function openScriptViewer(index) {
     // PC 화면(가로 768 초과)일 때 인덱스가 홀수(오른쪽 페이지)라면 짝수(왼쪽 페이지)로 강제 정렬
@@ -7143,13 +7164,12 @@ function openScriptViewer(index) {
             <div class="sd-topbar no-print">
                 <div class="sd-topbar-title">${day}일차 대본</div>
                 <div class="sd-topbar-actions">
-                    <button class="sd-mode-btn" onclick="toggleScriptRenderMode()" title="원본 PNG로 보기">🖼 원본</button>
                     <button onclick="openDayStudy(${day})" title="이 일차 암송 보기">📖 암송</button>
                     ${prevBtn}${nextBtn}
                     <button class="sd-close" onclick="goBack()">✖ 닫기</button>
                 </div>
             </div>
-            <div class="sd-viewport" id="sdViewport"><div class="sd-fitrow" id="sdFitRow">${scriptHtmlData[day]}</div></div>
+            <div class="sd-viewport" id="sdViewport"><div class="sd-fitrow" id="sdFitRow">${mergeScriptPages(scriptHtmlData[day])}</div></div>
         `;
         document.getElementById('scriptDetailContent').innerHTML = htmlDoc;
         document.getElementById('stepScriptViewer').style.display = 'block';
@@ -7164,6 +7184,7 @@ function openScriptViewer(index) {
         if (!window.__sdFitHandler) window.__sdFitHandler = () => fitScriptToScreen();
         window.removeEventListener('resize', window.__sdFitHandler);
         window.addEventListener('resize', window.__sdFitHandler);
+        initScriptSwipe(day); // 좌우 스와이프로 이전/다음 일차
         updateFloatingUI(false);
         return;
     }
