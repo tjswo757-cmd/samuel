@@ -1319,6 +1319,14 @@
         .sd-branch-body { padding-left: 12px; }
     }
 
+    /* [신규] 대본 뷰어를 화면 전체로 — .scroll-content(가운데정렬 flex) 안에서 가운데 카드처럼 보이던 것을 전체화면으로 */
+    #stepScriptViewer.paper-view-container {
+        position: fixed; inset: 0; z-index: 3000;
+        padding: 0 !important; margin: 0;
+        background: #eef1f5;
+    }
+    [data-theme="dark"] #stepScriptViewer.paper-view-container { background: #14181f; }
+
     /* [신규] 대본 한 화면 맞춤 모드 — 각 일차를 스크롤 없이 한 화면에 가득 (암송 외우기처럼) */
     .sd-viewport.sd-fit {
         overflow: hidden;
@@ -1354,6 +1362,39 @@
     .sd-viewport.sd-fit .sd-fitrow .sd-page.sd-2col .sd-key { break-inside: avoid; }
     .sd-viewport.sd-fit .sd-fitrow .sd-page.sd-2col .sd-sec-head { break-after: avoid; }
     .sd-viewport.sd-fit .sd-fig { max-width: 100%; }
+
+    /* [신규] 대본 필기 캔버스 (fitrow 안에 있어 본문과 함께 스케일됨) */
+    #sdCanvas {
+        position: absolute; top: 0; left: 0;
+        z-index: 5; touch-action: none;
+        pointer-events: none; /* 필기 모드일 때만 auto */
+    }
+    #sdViewport.sd-pen #sdCanvas { pointer-events: auto; }
+    #sdViewport.sd-pen { cursor: crosshair; }
+    /* 대본 필기 툴바 */
+    .sd-penbar {
+        position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+        z-index: 3600; display: flex; align-items: center; gap: 6px;
+        background: rgba(255,255,255,0.96); border: 1px solid rgba(0,0,0,0.08);
+        box-shadow: 0 6px 24px rgba(15,30,60,0.18); border-radius: 999px;
+        padding: 6px 8px; backdrop-filter: blur(6px);
+    }
+    [data-theme="dark"] .sd-penbar { background: rgba(30,36,46,0.96); border-color: rgba(255,255,255,0.12); }
+    .sd-penbar button {
+        border: none; background: #eef1f5; color: #2b3440; cursor: pointer;
+        border-radius: 999px; font-weight: 800; font-size: 0.86rem;
+        padding: 8px 12px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    }
+    [data-theme="dark"] .sd-penbar button { background: #2a3340; color: #e6ebf2; }
+    .sd-penbar button.on { background: #16a3a3; color: #fff; }
+    .sd-penbar .sd-pen-tools { display: none; align-items: center; gap: 6px; }
+    .sd-penbar.active .sd-pen-tools { display: inline-flex; }
+    .sd-pen-color {
+        width: 26px; height: 26px; border-radius: 50%; padding: 0;
+        border: 2px solid rgba(0,0,0,0.15) !important;
+    }
+    .sd-pen-color.sel { outline: 3px solid #16a3a3; outline-offset: 1px; }
+    .sd-penbar .sd-pen-div { width: 1px; height: 24px; background: rgba(0,0,0,0.12); margin: 0 2px; }
 
     /* =========================================================
        [신규] 다크 모드 — 라이트 모드를 건드리지 않도록 덧씌움
@@ -3504,6 +3545,7 @@ function selectCourse(c) { course = c; try { localStorage.setItem('lastCourse', 
 function goHome() {
     // [변경] 새로고침(location.reload) 시 전체화면이 풀려서 → 인앱으로 홈 이동(전체화면 유지)
     window.__scriptReturnDay = null;
+    try { if (typeof sdHideToolbar === 'function') sdHideToolbar(); } catch (e) {}
     try { updateFloatingUI(false); } catch (e) {}
     const studyArea = document.getElementById('studyArea');
     const plowingDetail = document.getElementById('stepPlowingDetail');
@@ -3527,6 +3569,7 @@ function goBack() {
 const scriptViewer = document.getElementById('stepScriptViewer');
     if (scriptViewer.style.display === 'block') {
         updateFloatingUI(false);
+        if (typeof sdHideToolbar === 'function') sdHideToolbar();
         scriptViewer.style.display = 'none';
         document.getElementById('globalHeader').classList.remove('header-hidden');
         document.querySelector('.app-footer').classList.remove('footer-hidden'); 
@@ -7032,6 +7075,7 @@ function showScriptList() {
 }
 // [신규] 대본에서 해당 일차 암송 외우기로 바로 이동
 function openDayStudy(day){
+    if (typeof sdHideToolbar === 'function') sdHideToolbar();
     const dv = document.getElementById('stepScriptViewer'); if (dv) dv.style.display = 'none';
     const gh = document.getElementById('globalHeader'); if (gh) gh.classList.remove('header-hidden');
     const af = document.querySelector('.app-footer'); if (af) af.classList.remove('footer-hidden');
@@ -7109,6 +7153,7 @@ function fitScriptToScreen() {
     const tx = padX + Math.max(0, (availW - m.w * scale) / 2);
     const ty = padTop + Math.max(0, (availH - m.h * scale) / 2);
     row.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+    if (typeof sdResizeCanvas === 'function') sdResizeCanvas(); // 필기 캔버스도 페이지 크기에 맞춤
 }
 // [신규] 한 일차가 여러 .sd-page(원본 좌/우)로 나뉘어 있으면 하나로 합침 → 2단 균형 배치로 화면을 꽉 채우기 위함
 function mergeScriptPages(dayHtml) {
@@ -7128,6 +7173,7 @@ function initScriptSwipe(day) {
     const goNext = () => { if (day < 6) openScriptViewer(day * 2); };
     const goPrev = () => { if (day > 1) openScriptViewer((day - 2) * 2); };
     vp.addEventListener('pointerdown', e => {
+        if (vp.classList.contains('sd-pen')) return; // 필기 중엔 스와이프 안 함
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         sx = e.clientX; sy = e.clientY; tracking = true;
     });
@@ -7140,6 +7186,140 @@ function initScriptSwipe(day) {
         }
     });
     vp.addEventListener('pointercancel', () => { tracking = false; });
+}
+
+// ===== [신규] 대본 필기 (암송 외우기처럼 펜/형광펜/지우개, 일차별 저장) =====
+const sdDraw = { strokes: [], tool: 'pen', color: '#e74c3c', penMode: false, cur: null, drawing: false, day: 1 };
+function sdKey() { return 'sd_draw_' + sdDraw.day; }
+function sdLoadStrokes(day) {
+    sdDraw.day = day;
+    try { sdDraw.strokes = JSON.parse(localStorage.getItem(sdKey()) || '[]'); } catch (e) { sdDraw.strokes = []; }
+}
+function sdSaveStrokes() { try { localStorage.setItem(sdKey(), JSON.stringify(sdDraw.strokes)); } catch (e) {} }
+function sdResizeCanvas() {
+    const row = document.querySelector('.sd-fitrow');
+    const page = row && row.querySelector('.sd-page');
+    const cv = document.getElementById('sdCanvas');
+    if (!row || !page || !cv) return;
+    const w = page.offsetWidth, h = page.offsetHeight;
+    if (!w || !h) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    sdRedraw();
+}
+function sdDrawStroke(ctx, s) {
+    if (!s.p || !s.p.length) return;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = s.c; ctx.lineWidth = s.w; ctx.globalAlpha = s.hl ? 0.35 : 1;
+    ctx.beginPath(); ctx.moveTo(s.p[0][0], s.p[0][1]);
+    for (let i = 1; i < s.p.length; i++) ctx.lineTo(s.p[i][0], s.p[i][1]);
+    if (s.p.length === 1) ctx.lineTo(s.p[0][0] + 0.1, s.p[0][1] + 0.1);
+    ctx.stroke(); ctx.globalAlpha = 1;
+}
+function sdRedraw() {
+    const cv = document.getElementById('sdCanvas'); if (!cv) return;
+    const ctx = cv.getContext('2d'); const dpr = Math.min(2, window.devicePixelRatio || 1);
+    ctx.clearRect(0, 0, cv.width / dpr, cv.height / dpr);
+    for (const s of sdDraw.strokes) sdDrawStroke(ctx, s);
+    if (sdDraw.cur) sdDrawStroke(ctx, sdDraw.cur);
+}
+function sdPoint(e) {
+    const cv = document.getElementById('sdCanvas'); const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) * (cv.clientWidth / r.width), (e.clientY - r.top) * (cv.clientHeight / r.height)];
+}
+function sdEraseAt(p) {
+    const R = 16; let changed = false;
+    for (let i = sdDraw.strokes.length - 1; i >= 0; i--) {
+        const s = sdDraw.strokes[i];
+        if (s.p.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < R + s.w)) { sdDraw.strokes.splice(i, 1); changed = true; }
+    }
+    if (changed) sdRedraw();
+}
+function sdOnDown(e) {
+    if (!sdDraw.penMode) return;
+    sdDraw.drawing = true;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {}
+    const p = sdPoint(e);
+    if (sdDraw.tool === 'eraser') { sdEraseAt(p); sdDraw.cur = null; }
+    else sdDraw.cur = { c: sdDraw.color, w: sdDraw.tool === 'hl' ? 22 : 3.5, hl: sdDraw.tool === 'hl', p: [p] };
+    e.preventDefault();
+}
+function sdOnMove(e) {
+    if (!sdDraw.drawing) return;
+    const p = sdPoint(e);
+    if (sdDraw.tool === 'eraser') sdEraseAt(p);
+    else if (sdDraw.cur) { sdDraw.cur.p.push(p); sdRedraw(); }
+    e.preventDefault();
+}
+function sdOnUp() {
+    if (!sdDraw.drawing) return; sdDraw.drawing = false;
+    if (sdDraw.cur) { sdDraw.strokes.push(sdDraw.cur); sdDraw.cur = null; }
+    sdSaveStrokes(); sdRedraw();
+}
+function sdSetTool(tool, color) {
+    sdDraw.tool = tool; if (color) sdDraw.color = color;
+    document.querySelectorAll('.sd-pen-color').forEach(b => b.classList.toggle('sel', b.dataset.tool === tool && b.dataset.color === sdDraw.color));
+    const er = document.getElementById('sdEraserBtn'); if (er) er.classList.toggle('on', tool === 'eraser');
+}
+function sdTogglePen() {
+    sdDraw.penMode = !sdDraw.penMode;
+    const bar = document.getElementById('sdPenBar');
+    const vp = document.getElementById('sdViewport');
+    const tgl = document.getElementById('sdPenToggle');
+    if (bar) bar.classList.toggle('active', sdDraw.penMode);
+    if (vp) vp.classList.toggle('sd-pen', sdDraw.penMode);
+    if (tgl) tgl.classList.toggle('on', sdDraw.penMode);
+}
+function sdClearAll() {
+    if (!sdDraw.strokes.length) return;
+    sdDraw.strokes = []; sdSaveStrokes(); sdRedraw();
+}
+function sdUndo() { if (sdDraw.strokes.length) { sdDraw.strokes.pop(); sdSaveStrokes(); sdRedraw(); } }
+// 대본 뷰어 열 때 필기 캔버스+툴바 준비
+function sdSetupDrawing(day) {
+    sdLoadStrokes(day);
+    const row = document.getElementById('sdFitRow');
+    if (row && !document.getElementById('sdCanvas')) {
+        const cv = document.createElement('canvas');
+        cv.id = 'sdCanvas';
+        cv.addEventListener('pointerdown', sdOnDown);
+        cv.addEventListener('pointermove', sdOnMove);
+        cv.addEventListener('pointerup', sdOnUp);
+        cv.addEventListener('pointercancel', sdOnUp);
+        row.appendChild(cv);
+    }
+    // 툴바(1회 생성, body 직속)
+    let bar = document.getElementById('sdPenBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'sdPenBar'; bar.className = 'sd-penbar';
+        bar.innerHTML =
+            '<button id="sdPenToggle" onclick="sdTogglePen()">✏️ 필기</button>' +
+            '<div class="sd-pen-tools">' +
+            '<button class="sd-pen-color" data-tool="pen" data-color="#1a1a1a" style="background:#1a1a1a" onclick="sdSetTool(\'pen\',\'#1a1a1a\')"></button>' +
+            '<button class="sd-pen-color" data-tool="pen" data-color="#e74c3c" style="background:#e74c3c" onclick="sdSetTool(\'pen\',\'#e74c3c\')"></button>' +
+            '<button class="sd-pen-color" data-tool="pen" data-color="#2563eb" style="background:#2563eb" onclick="sdSetTool(\'pen\',\'#2563eb\')"></button>' +
+            '<button class="sd-pen-color" data-tool="hl" data-color="#f1c40f" style="background:#f7e17a" onclick="sdSetTool(\'hl\',\'#f1c40f\')"></button>' +
+            '<span class="sd-pen-div"></span>' +
+            '<button id="sdEraserBtn" onclick="sdSetTool(\'eraser\')">지우개</button>' +
+            '<button onclick="sdUndo()">되돌리기</button>' +
+            '<button onclick="sdClearAll()">전체지우기</button>' +
+            '</div>';
+        document.body.appendChild(bar);
+    }
+    bar.style.display = 'flex';
+    // 상태 초기화(읽기 모드로 시작)
+    sdDraw.penMode = false;
+    bar.classList.remove('active');
+    document.getElementById('sdPenToggle').classList.remove('on');
+    sdSetTool(sdDraw.tool, sdDraw.color);
+}
+function sdHideToolbar() {
+    const bar = document.getElementById('sdPenBar'); if (bar) bar.style.display = 'none';
+    sdDraw.penMode = false;
+    const vp = document.getElementById('sdViewport'); if (vp) vp.classList.remove('sd-pen');
 }
 function openScriptViewer(index) {
     // PC 화면(가로 768 초과)일 때 인덱스가 홀수(오른쪽 페이지)라면 짝수(왼쪽 페이지)로 강제 정렬
@@ -7181,6 +7361,7 @@ function openScriptViewer(index) {
         setTimeout(fitScriptToScreen, 130);
         setTimeout(fitScriptToScreen, 420);
         sdvp.querySelectorAll('img').forEach(im => { if (!im.complete) im.addEventListener('load', fitScriptToScreen, { once: true }); });
+        sdSetupDrawing(day); // 필기 캔버스+툴바 준비(캔버스는 fit 시 크기 맞춤)
         if (!window.__sdFitHandler) window.__sdFitHandler = () => fitScriptToScreen();
         window.removeEventListener('resize', window.__sdFitHandler);
         window.addEventListener('resize', window.__sdFitHandler);
