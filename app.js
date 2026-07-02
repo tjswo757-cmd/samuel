@@ -1321,8 +1321,8 @@ function coachRun(key, steps, opts) {
         const el = elOf(s);
         let r = null;
         if (el && el.getBoundingClientRect) { const b = el.getBoundingClientRect(); if (b.width > 0 && b.height > 0) r = b; }
-        if (r) { const pad = s.pad != null ? s.pad : 8; hole.style.display = 'block'; hole.style.left = (r.left - pad) + 'px'; hole.style.top = (r.top - pad) + 'px'; hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px'; }
-        else { hole.style.display = 'none'; }
+        if (r) { const pad = s.pad != null ? s.pad : 8; hole.style.display = 'block'; hole.style.left = (r.left - pad) + 'px'; hole.style.top = (r.top - pad) + 'px'; hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px'; ov.style.background = 'transparent'; }
+        else { hole.style.display = 'none'; ov.style.background = 'rgba(15,20,32,0.55)'; } // 강조할 요소가 없는 안내(몰입모드·대본닫기 등)는 화면 전체를 균일하게 딤
         const last = i === list.length - 1;
         const dots = list.map((_, k) => '<span class="coach-dot' + (k === i ? ' on' : '') + '"></span>').join('');
         const leftBtn = i > 0

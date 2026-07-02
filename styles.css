@@ -1577,7 +1577,7 @@
     [data-theme="dark"] .mp-edit-btn { border-color: #5aa9e6; color: #8cc6f0; }
 
     /* ===== 최초 방문 코치마크(스포트라이트) 튜토리얼 ===== */
-    .coach-ov { position: fixed; inset: 0; z-index: 2147483000; }
+    .coach-ov { position: fixed; inset: 0; z-index: 2147483000; transition: background .25s ease; }
     /* 강조할 부분만 남기고 나머지는 '살짝' 어둡게(0.55) + 강조 요소 둘레에 은은한 링 → 편안하게 시선 유도 */
     .coach-hole { position: fixed; border-radius: 12px; pointer-events: none;
         box-shadow: 0 0 0 3px rgba(96,165,250,0.85), 0 0 0 9999px rgba(15,20,32,0.55);
