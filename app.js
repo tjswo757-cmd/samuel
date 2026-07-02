@@ -2661,12 +2661,10 @@ function saveToolbarPos() {
     sessionToolbarPos = { left: parseInt(tb.style.left) || 0, top: parseInt(tb.style.top) || 0 };
 }
 function resetToolbarPos() { sessionToolbarPos = null; }
-// 상단 헤더(배너) 높이 + 여백 → 툴바·네비가 이 위로 못 올라오게 하는 안전선
+// 툴바 상단 여백 — 화면 맨 위에 붙을 수 있도록 작은 값만 확보.
+// (툴바 z-index가 상단 헤더보다 높아 스와이프로 헤더가 내려와도 툴바가 가려지지 않으므로 헤더 높이만큼 밀어낼 필요 없음)
 function topSafeInset() {
-    const gh = document.getElementById('globalHeader');
-    let h = gh ? gh.offsetHeight : 0;
-    if (!h) h = 70;
-    return h + 6;
+    return 10;
 }
 function clampToolbarPos() {
     const tb = document.getElementById('flexToolbar');
