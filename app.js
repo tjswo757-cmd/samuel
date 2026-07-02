@@ -5250,19 +5250,6 @@ function printScript(day){
     const go = () => { if (++n >= imgs.length) { try { w.focus(); w.print(); } catch(e){} } };
     for (const im of imgs) { if (im.complete) go(); else { im.onload = go; im.onerror = go; } }
 }
-// [신규] 대본 밀도(줄간격·자간·여백) 조절 — d: -1(넉넉하게) ~ 0(기본) ~ 1(빽빽하게)
-// 글이 적은 일차는 음수 쪽으로 넉넉하게, 글이 많은 일차는 양수 쪽으로 빽빽하게 눌러서
-// 모든 일차가 화면을 같은 크기로 꽉 채우도록 fitScriptToScreen()이 이 값을 탐색한다.
-function sdSetDensity(page, d) {
-    d = Math.max(-1, Math.min(1, d));
-    const lh = d < 0 ? (1.6 - d * 0.5) : (1.6 - d * 0.32);   // d=-1→2.1, d=0→1.6, d=1→1.28
-    const ls = -d * 0.016;                                    // em, d=-1→+0.016em, d=1→-0.016em
-    const sp = d < 0 ? (1 - d * 0.4) : (1 - d * 0.42);        // d=-1→1.4배, d=0→1배, d=1→0.58배
-    page.style.setProperty('--sd-lh', lh.toFixed(3));
-    page.style.setProperty('--sd-ls', ls.toFixed(4) + 'em');
-    page.style.setProperty('--sd-sp', sp.toFixed(3));
-    return d;
-}
 // [신규] 대본(HTML 모드)을 스크롤 없이 한 화면에 가득 차게 스케일링
 // 한 일차의 여러 .sd-page(원본 좌·우 페이지)를 가로로 나란히 펼친 뒤 전체를 화면에 맞춰 축소/확대한다.
 function fitScriptToScreen() {
@@ -5285,7 +5272,6 @@ function fitScriptToScreen() {
     if (imgPage) {
         // 이미지 대본: 원본 비율 그대로, 페이지 전체가 보이도록(contain) 맞춤 → 모든 일차가 동일 크기
         page.classList.remove('sd-2col');
-        page.style.removeProperty('--sd-lh'); page.style.removeProperty('--sd-ls'); page.style.removeProperty('--sd-sp');
         const im = page.querySelector('img');
         const nW = (im && im.naturalWidth) ? im.naturalWidth : 2000;
         page.style.width = nW + 'px';
@@ -5295,36 +5281,21 @@ function fitScriptToScreen() {
     } else {
         const wide = vp.clientWidth > 820;
         page.classList.toggle('sd-2col', wide); // 넓은 화면은 2단
-        // 페이지 폭을 여러 값으로 시도 → 각 폭마다 밀도(줄간격·자간·여백)를 이분 탐색해
-        // 세로 높이를 그 폭에서 화면을 정확히 채우는 높이에 맞춤. 그 중 기본 밀도(d=0)에서
-        // 가장 덜 벗어난(자연스러운) 조합을 선택 → 모든 일차가 여백 없이 동일한 크기로 꽉 참.
+        // 페이지 폭을 여러 값으로 시도 → 화면을 가장 많이 채우는(짧은 축 채움률 최대) 폭 선택.
         const COLMAX = 980;
         const maxW = wide ? (COLMAX * 2 + 42) : Math.min(920, vp.clientWidth - 20);
         const candidates = wide
             ? [0.65, 0.8, 0.95, 1.1, 1.25, 1.4].map(f => Math.min(availW * f, maxW))
             : [maxW];
-        best = { score: -Infinity, fill: -1, scale: 0, w: candidates[0], d: 0 };
+        best = { fill: -1, scale: 0, w: candidates[0] };
         for (const w of candidates) {
-            const targetH = availH * w / availW; // 이 폭에서 화면을 꽉 채우는 데 필요한 높이
-            let lo = -1, hi = 1, d = 0;
-            for (let i = 0; i < 6; i++) {
-                d = (lo + hi) / 2;
-                sdSetDensity(page, d);
-                page.style.width = w + 'px';
-                const h = page.offsetHeight;
-                if (h > targetH) lo = d; else hi = d; // 높으면 더 빽빽하게, 낮으면 더 넉넉하게
-            }
-            d = (lo + hi) / 2;
-            sdSetDensity(page, d);
             page.style.width = w + 'px';
             const m = measure();
             if (!m.w || !m.h) continue;
             const s = Math.min(availW / m.w, availH / m.h);
             const fill = Math.min(m.w * s / availW, m.h * s / availH); // 짧은 축 채움률
-            const score = fill - Math.abs(d) * 0.05; // 채움률 우선, 동률이면 밀도 왜곡이 적은 쪽
-            if (score > best.score) best = { score: score, fill: fill, scale: s, w: w, d: d };
+            if (fill > best.fill) best = { fill: fill, scale: s, w: w };
         }
-        sdSetDensity(page, best.d); // 최종 선택된 폭의 밀도로 확정
     }
     page.style.width = best.w + 'px';
     const baseScale = imgPage ? Math.min(best.scale, 3.0) : Math.max(0.3, Math.min(best.scale, 3.0));
