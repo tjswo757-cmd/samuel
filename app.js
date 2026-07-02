@@ -3543,12 +3543,13 @@ function applyStrokeStyle(s) {
 
 // [가림 테이프] 그은 궤적의 바깥 사각형(+두께) — 이 영역을 통째로 불투명하게 채워 글자를 모두 가림
 function tapeBox(s) {
-    // 높이는 '굵기(w)'로 고정 — 그은 궤적의 세로 흔들림과 무관하게 일정한 높이의 가로 막대로 덮음
+    // 세로 위치는 '처음 찍은 점'의 y에 고정(그리는 동안 위아래로 안 움직임),
+    // 높이는 '굵기(w)'로 고정 → 일정한 높이의 가로 막대로 덮음(밑줄식)
     const p = s.p, w = (s.w || 26), half = w / 2;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const q of p) { if (q[0] < minX) minX = q[0]; if (q[0] > maxX) maxX = q[0]; if (q[1] < minY) minY = q[1]; if (q[1] > maxY) maxY = q[1]; }
-    const midY = (minY + maxY) / 2; // 세로 위치 = 궤적 중앙
-    return { x: minX - half, y: midY - half, w: (maxX - minX) + w, h: w };
+    let minX = Infinity, maxX = -Infinity;
+    for (const q of p) { if (q[0] < minX) minX = q[0]; if (q[0] > maxX) maxX = q[0]; }
+    const y0 = p[0][1];
+    return { x: minX - half, y: y0 - half, w: (maxX - minX) + w, h: w };
 }
 function strokePath(s) {
     const ctx = drawCtx, p = s.p;
