@@ -1276,6 +1276,35 @@
     .sd-legend-item h4 { margin: 0 0 2px; font-size: 1em; font-weight: 900; color: #1f2a37; }
     .sd-legend-item p { margin: 0; font-size: 0.9em; color: #5b6675; line-height: 1.5; }
 
+    /* [신규] 동심원 + 인출선(leader line) 다이어그램 — 이미지 대신 벡터로 재현(확대해도 선명).
+       내부 좌표는 원본 도해(1000×778 기준) 픽셀을 그대로 써서 svg viewBox로 1:1 매핑 → 반응형이어도 항상 정렬됨 */
+    .sd-linediagram {
+        position: relative;
+        width: 100%; max-width: 640px;
+        aspect-ratio: 1000 / 778;
+        margin: 22px auto 6px;
+    }
+    .sd-linediagram-circle {
+        position: absolute; left: 32.2%; top: 39.2%;
+        width: 37.8%; height: 48.6%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: radial-gradient(circle closest-side,
+            #476ba5 0%, #476ba5 32%,
+            #ffffff 32%, #ffffff 53%,
+            #019ed6 53%, #019ed6 66%,
+            #ffffff 66%, #ffffff 75%,
+            #45ab66 75%, #45ab66 100%);
+        box-shadow: 0 8px 24px rgba(42,120,157,0.25);
+    }
+    .sd-linediagram svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .sd-linediagram-label {
+        position: absolute; width: 37%;
+        font-size: clamp(0.68rem, 1.5vw, 0.88rem); line-height: 1.5; color: #5b6675;
+    }
+    .sd-linediagram-label b { display: block; font-size: 1.18em; font-weight: 900; color: #1f2a37; margin-bottom: 2px; }
+    @media (max-width: 560px) { .sd-linediagram-label { font-size: 0.62rem; } }
+
     /* 대본 뷰어 상단 바 (HTML 모드) */
     /* [개선] 상단 '창 제목표시줄' 느낌 제거 → 투명 바 + 떠 있는 알약 버튼(암송 외우기 플로팅 컨트롤과 동일 톤).
        바 자체는 pointer-events:none으로 본문 제스처(팬/필기)를 막지 않고, 버튼만 클릭 가능. */
