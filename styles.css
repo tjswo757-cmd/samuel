@@ -1576,6 +1576,29 @@
     .mp-edit-btn:hover { background: var(--primary); color: #fff; }
     [data-theme="dark"] .mp-edit-btn { border-color: #5aa9e6; color: #8cc6f0; }
 
+    /* ===== 최초 방문 코치마크(스포트라이트) 튜토리얼 ===== */
+    .coach-ov { position: fixed; inset: 0; z-index: 2147483000; }
+    /* 강조할 부분만 남기고 나머지는 '살짝' 어둡게(0.55) + 강조 요소 둘레에 은은한 링 → 편안하게 시선 유도 */
+    .coach-hole { position: fixed; border-radius: 12px; pointer-events: none;
+        box-shadow: 0 0 0 3px rgba(96,165,250,0.85), 0 0 0 9999px rgba(15,20,32,0.55);
+        transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease; }
+    .coach-pop { position: fixed; width: min(300px, calc(100vw - 24px)); background: #fff; color: #1f2a37;
+        border-radius: 16px; padding: 16px 16px 12px; box-shadow: 0 16px 44px rgba(0,0,0,0.4); z-index: 2147483001; }
+    .coach-title { font-weight: 800; font-size: 1.02rem; margin-bottom: 6px; }
+    .coach-body { font-size: 0.9rem; line-height: 1.55; color: #48525f; }
+    .coach-body b { color: #2563eb; font-weight: 800; }
+    .coach-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 10px; }
+    .coach-dots { display: flex; gap: 5px; }
+    .coach-dot { width: 6px; height: 6px; border-radius: 50%; background: #d3d9e0; transition: all .2s; }
+    .coach-dot.on { background: #2563eb; width: 16px; border-radius: 3px; }
+    .coach-btns { display: flex; gap: 8px; }
+    .coach-btn { border: none; border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+    .coach-btn.ghost { background: #eef1f5; color: #5b6675; }
+    .coach-btn.primary { background: #2563eb; color: #fff; }
+    [data-theme="dark"] .coach-pop { background: #1b212b; color: #e6ebf2; }
+    [data-theme="dark"] .coach-body { color: #aeb8c4; }
+    [data-theme="dark"] .coach-btn.ghost { background: #2a3340; color: #c9d3df; }
+
     /* 수료 점수 계산기 */
     .exam-card { background: #fff; border: 1px solid #eef1f5; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 6px 18px rgba(15,30,60,0.06); }
     .exam-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }

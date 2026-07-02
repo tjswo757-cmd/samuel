@@ -466,9 +466,11 @@ function ensureProfileMenu(){
   m.innerHTML =
     '<div class="pm-head"><div class="pm-nick" id="pmNick"></div><div class="pm-sub" id="pmSub"></div></div>' +
     '<button class="pm-item" id="pmMyPage">마이페이지</button>' +
+    '<button class="pm-item" id="pmHelp">사용법 다시 보기</button>' +
     '<button class="pm-item pm-logout" id="pmLogout">로그아웃</button>';
   document.body.appendChild(m);
   document.getElementById('pmMyPage').onclick = () => { closeProfileMenu(); if (typeof window.selectRootMode === 'function') window.selectRootMode('stats'); };
+  document.getElementById('pmHelp').onclick = () => { closeProfileMenu(); if (typeof window.coachReset === 'function') window.coachReset(); };
   document.getElementById('pmLogout').onclick = () => { closeProfileMenu(); samuelLogout(); };
   document.addEventListener('click', (e) => {
     const menu = document.getElementById('profileMenu');

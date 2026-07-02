@@ -1109,7 +1109,7 @@ function computeCompletion() {
 
 function fmtNum(n) { return (n || 0).toLocaleString('ko-KR'); }
 
-function showStats() { renderStats(); showStep('stepStats'); }
+function showStats() { renderStats(); showStep('stepStats'); setTimeout(() => { try { if (document.querySelector('.mp-edit-btn')) coachRun('mypage', coachStepsMypage()); } catch(e){} }, 500); }
 
 function renderStats() {
     const box = document.getElementById('statsContent');
@@ -1273,10 +1273,112 @@ function searchVerses() {
         : '<div class="vs-empty">검색 결과가 없습니다.</div>';
 }
 
+/* ===================== 최초 방문 코치마크(스포트라이트) 튜토리얼 ===================== */
+let __coachActive = false;
+function __coachSeen(k){ try { return localStorage.getItem('coach_' + k) === '1'; } catch(e){ return false; } }
+function __coachDone(k){ try { localStorage.setItem('coach_' + k, '1'); } catch(e){} }
+function __coachOptedOut(){ try { return localStorage.getItem('coach_optout') === '1'; } catch(e){ return false; } }
+function coachReset(){
+    try { ['home','study','script','mypage','plowing'].forEach(k => localStorage.removeItem('coach_' + k)); localStorage.removeItem('coach_optout'); } catch(e){}
+    coachRun('home', coachStepsHome(), { force: true, optoutOnSkip: true });
+}
+window.coachReset = coachReset;
+// 화면별 첫 진입 시 안내 실행(중복/옵트아웃 방지). setTimeout으로 감싸 렌더 후 실행 권장.
+function coachRun(key, steps, opts) {
+    opts = opts || {};
+    if (__coachActive) return;
+    if (!opts.force && (__coachOptedOut() || __coachSeen(key))) return;
+    const list = (steps || []).filter(Boolean);
+    if (!list.length) { __coachDone(key); return; }
+    __coachActive = true;
+    const ov = document.createElement('div'); ov.className = 'coach-ov';
+    const hole = document.createElement('div'); hole.className = 'coach-hole';
+    const pop = document.createElement('div'); pop.className = 'coach-pop';
+    ov.appendChild(hole); ov.appendChild(pop); document.body.appendChild(ov);
+    let i = 0;
+    const elOf = s => { try { return typeof s.el === 'function' ? s.el() : (s.el ? document.querySelector(s.el) : null); } catch(e){ return null; } };
+    function finish(optout){
+        if (optout) { try { localStorage.setItem('coach_optout', '1'); } catch(e){} }
+        __coachDone(key); if (ov.parentNode) ov.remove(); __coachActive = false;
+        window.removeEventListener('resize', reflow);
+    }
+    function positionPop(r){
+        pop.style.transform = 'none';
+        const pw = pop.offsetWidth || 300, ph = pop.offsetHeight || 160, M = 12;
+        if (r && r.bottom + ph + 16 < window.innerHeight) { // 요소 아래
+            pop.style.top = (r.bottom + 14) + 'px';
+        } else if (r && r.top - ph - 16 > 0) {              // 요소 위
+            pop.style.top = (r.top - ph - 14) + 'px';
+        } else {                                            // 공간 없으면 중앙
+            pop.style.left = '50%'; pop.style.top = '50%'; pop.style.transform = 'translate(-50%,-50%)'; return;
+        }
+        const cx = r ? (r.left + r.width / 2 - pw / 2) : (window.innerWidth / 2 - pw / 2);
+        pop.style.left = Math.min(Math.max(M, cx), window.innerWidth - pw - M) + 'px';
+    }
+    function render(){
+        const s = list[i]; if (!s) return;
+        if (s.before) { try { s.before(); } catch(e){} }
+        const el = elOf(s);
+        let r = null;
+        if (el && el.getBoundingClientRect) { const b = el.getBoundingClientRect(); if (b.width > 0 && b.height > 0) r = b; }
+        if (r) { const pad = s.pad != null ? s.pad : 8; hole.style.display = 'block'; hole.style.left = (r.left - pad) + 'px'; hole.style.top = (r.top - pad) + 'px'; hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px'; }
+        else { hole.style.display = 'none'; }
+        const last = i === list.length - 1;
+        const dots = list.map((_, k) => '<span class="coach-dot' + (k === i ? ' on' : '') + '"></span>').join('');
+        const leftBtn = i > 0
+            ? '<button class="coach-btn ghost" data-act="prev">이전</button>'
+            : '<button class="coach-btn ghost" data-act="skip">' + (s.skipLabel || '건너뛰기') + '</button>';
+        pop.innerHTML =
+            '<div class="coach-title">' + escHtml(s.title || '') + '</div>' +
+            '<div class="coach-body">' + (s.body || '') + '</div>' +
+            '<div class="coach-foot"><div class="coach-dots">' + dots + '</div>' +
+            '<div class="coach-btns">' + leftBtn +
+            '<button class="coach-btn primary" data-act="next">' + (last ? '완료' : '다음') + '</button></div></div>';
+        positionPop(r);
+    }
+    const reflow = () => { try { render(); } catch(e){} };
+    ov.addEventListener('click', e => {
+        const b = e.target.closest('[data-act]');
+        if (b) {
+            const a = b.getAttribute('data-act');
+            if (a === 'next') { if (i >= list.length - 1) finish(false); else { i++; render(); } }
+            else if (a === 'prev') { if (i > 0) { i--; render(); } }
+            else if (a === 'skip') { finish(!!opts.optoutOnSkip); }
+            return;
+        }
+        if (!e.target.closest('.coach-pop')) { if (i >= list.length - 1) finish(false); else { i++; render(); } }
+    });
+    window.addEventListener('resize', reflow);
+    render();
+}
+function coachStepsHome(){ return [
+    { el: null, title: '사무엘학교가 처음이신가요?', body: '주요 기능을 하나씩 짧게 알려드릴게요. 언제든 건너뛸 수 있어요.', skipLabel: '괜찮아요' },
+    { el: '#authBtn', title: '로그인 · 내 계정', body: '여기로 <b>구글 로그인</b>하면 진도·기록이 저장되고, 기기를 바꿔도 그대로 유지돼요. 로그인한 뒤 이 아이콘을 누르면 <b>마이페이지·로그아웃</b> 메뉴가 열려요.' },
+    { el: () => document.querySelector('[onclick*="toggleSidebar"]'), title: '암송 도우미', body: '☰를 누르면 <b>암송 도우미</b>가 열려요. 그 <b>제목줄을 끌면</b> 창처럼 자유롭게 옮기고, <b>오른쪽 아래 모서리</b>로 크기도 조절할 수 있어요.' },
+]; }
+function coachStepsStudy(){ return [
+    { el: null, title: '몰입 모드', body: '암송 화면은 위·아래 메뉴가 숨어 본문에 집중돼요. <b>화면을 위로 살짝 쓸어올리면</b> 상단 메뉴(◀ 뒤로가기)가 잠깐 나타나요.' },
+    { el: '#studyZoomCtl', before: () => { try { if (typeof showZoomCtl === 'function') showZoomCtl(); } catch(e){} }, title: '확대 · 고정', body: '<b>−/＋</b>로 크게 볼 수 있어요. (노트북은 <b>Ctrl+휠</b>, 태블릿은 <b>두 손가락</b>) <b>자물쇠🔒</b>를 누르면 지금 크기로 고정돼요.' },
+    { el: '.ft-wrong', title: '오답 체크', body: '켜면 예전에 <b>틀렸던 부분이 빨갛게</b> 표시돼서 약한 곳을 집중 연습할 수 있어요.' },
+    { el: '#flexToolbar', title: '필기 도구', body: '펜·형광펜 색을 <b>한 번 더 누르면</b> 굵기·색 옵션이 열려요. <b>글자 위에 그으면</b> 자동으로 형광펜/밑줄로 바뀌고, <b>가림 테이프</b>로 덮은 뒤 <b>탭하면 가렸다/보였다</b> 전환돼요.' },
+]; }
+function coachStepsScript(){ return [
+    { el: null, title: '대본 닫기', body: '대본은 닫기 버튼이 따로 없어요. <b>화면을 위로 쓸어올리면</b> 상단 메뉴가 나타나고 <b>◀ 뒤로가기</b>로 나가요. (좌우로 넘기면 이전/다음 일차)' },
+    { el: () => document.getElementById('sdZoomCtl'), title: '확대 · 고정', body: '오른쪽 아래 <b>−/＋</b>로 확대해요. 노트북은 <b>Ctrl+휠</b>, 태블릿은 <b>두 손가락</b>. <b>자물쇠</b>로 배율을 고정할 수 있어요.' },
+    { el: '#flexToolbar', title: '대본에도 필기', body: '암송과 똑같이 펜·형광펜·<b>가림 테이프</b>로 필기할 수 있어요. 색을 한 번 더 누르면 옵션이 열려요.' },
+]; }
+function coachStepsMypage(){ return [
+    { el: '.mp-edit-btn', title: '닉네임 · 과정 변경', body: '여기서 <b>닉네임</b>(중복되지 않으면 변경 가능)과 <b>과정</b>을 바꿀 수 있어요.' },
+]; }
+function coachStepsPlowing(){ return [
+    { el: '.fab-btn', title: '밭갈이 만들기', body: '<b>＋</b> 버튼으로 새 주제를 만들어요. 소제목·내용·구절 블록으로 나만의 밭갈이를 작성하고, 목록에서 열면 <b>✎ 수정</b>으로 고칠 수 있어요.' },
+]; }
+
 function initApp() {
     initTheme();
     updateSession();
     armAutoFullscreen();
+    setTimeout(() => { try { coachRun('home', coachStepsHome(), { optoutOnSkip: true }); } catch(e){} }, 1800); // 첫 방문 안내(스플래시 사라진 뒤)
     // 손가락 필기 토글 체크박스 초기 상태 반영
     document.querySelectorAll('.finger-draw-check').forEach(c => { c.checked = fingerDrawEnabled; });
     // 몰입 모드: 스크롤/스와이프 제스처로 상단·하단 바 잠깐 표시
@@ -1687,6 +1789,7 @@ function startStudy() {
     document.getElementById('mainWrongCheck').checked = isShowWrongMode;
 
     setTimeout(() => { initCanvas(); revealChrome(); }, 100);
+    setTimeout(() => { try { coachRun('study', coachStepsStudy()); } catch(e){} }, 850); // 암송 첫 진입 안내
 }
 // ----------------------------------------------------
 // [수정] 밭갈이 목록 표시 (롱프레스 이벤트 추가)
@@ -1718,6 +1821,7 @@ function showPlowingList() {
     html += `<button class="fab-btn no-print" onclick="openPlowingEditor(-1)" title="새 주제 추가">+</button>`;
     document.getElementById('plowingListContent').innerHTML = html;
     showStep('stepPlowingList');
+    setTimeout(() => { try { coachRun('plowing', coachStepsPlowing()); } catch(e){} }, 500); // 밭갈이 첫 진입 안내
 }
 
 // [신규] 롱프레스 핸들러
@@ -5303,6 +5407,7 @@ function openScriptViewer(index) {
     initScriptSwipe(day); // 좌우 스와이프로 이전/다음 일차
     // 필기 툴바는 암송 외우기와 동일하게 계속 표시(sdSetupDrawing에서 updateFloatingUI(true,'plowing') 호출됨)
     preloadScriptDays(); // 모든 일차 미리 받아둠 → 전환 시 지연 없음
+    setTimeout(() => { try { coachRun('script', coachStepsScript()); } catch(e){} }, 850); // 대본 첫 진입 안내
 }
 // 모든 일차 대본 이미지를 미리 받아둠(전환 지연 방지)
 function preloadScriptDays(){
