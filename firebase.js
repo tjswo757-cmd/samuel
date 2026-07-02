@@ -18,6 +18,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
+// 로그아웃은 Firebase 세션만 끊고 브라우저의 구글 로그인 상태는 그대로라, 이게 없으면
+// 재로그인 시 팝업이 계정 선택 없이 방금 로그아웃한 계정으로 바로 다시 들어가 버림.
+provider.setCustomParameters({ prompt: 'select_account' });
 
 // ===== 앱 스타일 알림/확인 모달 (브라우저 기본 팝업 대체) =====
 function ensureDialog(){

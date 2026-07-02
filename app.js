@@ -1301,6 +1301,7 @@ function coachRun(key, steps, opts) {
     const leave = () => { const s = list[i]; if (s && s.after) { try { s.after(); } catch(e){} } }; // 스텝 벗어날 때 정리(예: 상단바 다시 숨김)
     function finish(optout){
         leave();
+        clearTimeout(stepTimer);
         if (optout) { try { localStorage.setItem('coach_optout', '1'); } catch(e){} }
         __coachDone(key); if (ov.parentNode) ov.remove(); __coachActive = false;
         document.body.classList.remove('coach-active', 'reveal-top', 'sd-reveal-top'); // 안전 정리
@@ -1341,16 +1342,27 @@ function coachRun(key, steps, opts) {
         positionPop(r);
     }
     const reflow = () => { try { render(); } catch(e){} };
+    let stepTimer = null;
+    // 단계 이동: 벗어나는 단계가 상단바 등을 여닫는 애니메이션(after)을 갖고 있으면,
+    // 그 CSS 전환(≈.28s)이 끝난 뒤에 다음 스텝 위치를 계산해야 스포트라이트가 엉뚱한 곳(전환 중 좌표)에 그려지지 않는다.
+    function goto(newIndex){
+        const leaving = list[i];
+        leave();
+        i = newIndex;
+        clearTimeout(stepTimer);
+        if (leaving && leaving.after) { stepTimer = setTimeout(reflow, 300); }
+        else { render(); }
+    }
     ov.addEventListener('click', e => {
         const b = e.target.closest('[data-act]');
         if (b) {
             const a = b.getAttribute('data-act');
-            if (a === 'next') { if (i >= list.length - 1) finish(false); else { leave(); i++; render(); } }
-            else if (a === 'prev') { if (i > 0) { leave(); i--; render(); } }
+            if (a === 'next') { if (i >= list.length - 1) finish(false); else goto(i + 1); }
+            else if (a === 'prev') { if (i > 0) goto(i - 1); }
             else if (a === 'skip') { finish(!!opts.optoutOnSkip); }
             return;
         }
-        if (!e.target.closest('.coach-pop')) { if (i >= list.length - 1) finish(false); else { leave(); i++; render(); } }
+        if (!e.target.closest('.coach-pop')) { if (i >= list.length - 1) finish(false); else goto(i + 1); }
     });
     window.addEventListener('resize', reflow);
     render();
