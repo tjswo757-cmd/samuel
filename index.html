@@ -1764,7 +1764,7 @@
                 </div>
             </div>
             <div class="popup-row"><span class="popup-label">굵기</span>
-                <input type="range" id="tape-width" class="width-slider" min="12" max="52" value="26" oninput="updateSettings('tape','width',this.value)">
+                <input type="range" id="tape-width" class="width-slider" min="12" max="60" value="40" oninput="updateSettings('tape','width',this.value)">
             </div>
             <div class="popup-row"><span class="popup-label">직선 그리기</span>
                 <label class="toggle-switch"><input type="checkbox" id="tape-straight" checked onchange="updateSettings('tape','straight',this.checked)"><span class="toggle-slider"></span></label>
@@ -4242,7 +4242,7 @@ let currentTool = 'pen';
 let settings = {
     pen: { color: 'black', width: 3, straight: false },
     highlighter: { color: '#f1c40f', width: 18, straight: false, opacity: 0.32 },
-    tape: { color: '#cbd5e1', width: 26, straight: true },
+    tape: { color: '#cbd5e1', width: 40, straight: true },
     eraser: { mode: 'stroke', width: 14 }
 };
 let isPenModeActive = false;
@@ -4792,7 +4792,7 @@ function applyPresetToSettings(p) {
 /* 종류별 굵기 범위(슬라이더) — 펜 1~14, 형광펜 8~40, 테이프 12~52 */
 function widthRangeFor(tool) {
     if (tool === 'highlighter') return [8, 40];
-    if (tool === 'tape') return [12, 52];
+    if (tool === 'tape') return [12, 60];
     return [1, 14];
 }
 function selectPresetById(id) {
@@ -4822,7 +4822,7 @@ function setPresetType(tool) {
     p.tool = tool;
     if (tool === 'highlighter') { if (p.opacity == null) p.opacity = 0.32; if (!p.width || p.width < 8 || p.width > 40) p.width = 18; }
     else if (tool === 'tape') {
-        if (!p.width || p.width < 12) p.width = 26;       // 테이프는 두툼하게
+        if (!p.width || p.width < 12) p.width = 40;       // 테이프는 두툼하게(글자 줄을 덮도록)
         if (p.color === '#1a1a1a' || p.color === 'black') p.color = '#cbd5e1'; // 글자색이면 가림용 회색으로
         if (prevTool !== 'tape') p.straight = true;       // 테이프는 기본 직선 그리기 ON(원하면 토글로 끔)
     }
@@ -5651,9 +5651,26 @@ function applyStrokeStyle(s) {
     ctx.lineWidth = s.w;
 }
 
+// [가림 테이프] 그은 궤적의 바깥 사각형(+두께) — 이 영역을 통째로 불투명하게 채워 글자를 모두 가림
+function tapeBox(s) {
+    const p = s.p, half = (s.w || 26) / 2;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const q of p) { if (q[0] < minX) minX = q[0]; if (q[0] > maxX) maxX = q[0]; if (q[1] < minY) minY = q[1]; if (q[1] > maxY) maxY = q[1]; }
+    return { x: minX - half, y: minY - half, w: (maxX - minX) + s.w, h: (maxY - minY) + s.w };
+}
 function strokePath(s) {
     const ctx = drawCtx, p = s.p;
     if (!p.length) return;
+    // 테이프: 형광펜처럼 그은 영역을 통째로 불투명 사각형으로 채워 그 안 글자를 전부 가림
+    if (s.t === 'tape') {
+        const b = tapeBox(s);
+        const r = Math.max(0, Math.min(7, b.w / 2, b.h / 2));
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(b.x, b.y, b.w, b.h, r);
+        else ctx.rect(b.x, b.y, b.w, b.h);
+        ctx.fill();
+        return;
+    }
     if (p.length === 1) {
         ctx.beginPath();
         ctx.arc(p[0][0], p[0][1], Math.max(s.w / 2, 0.6), 0, Math.PI * 2);
@@ -5699,11 +5716,8 @@ function findTapeAt(x, y) {
     for (let i = strokes.length - 1; i >= 0; i--) {
         const s = strokes[i];
         if (!s || s.t !== 'tape') continue;
-        const p = s.p, thr = (s.w / 2) + 6;
-        if (p.length === 1) { if (Math.hypot(x - p[0][0], y - p[0][1]) <= thr) return i; continue; }
-        for (let j = 1; j < p.length; j++) {
-            if (distToSegment(x, y, p[j - 1][0], p[j - 1][1], p[j][0], p[j][1]) <= thr) return i;
-        }
+        const b = tapeBox(s); // 채워진 사각형 영역 안이면 해당 테이프
+        if (x >= b.x - 4 && x <= b.x + b.w + 4 && y >= b.y - 4 && y <= b.y + b.h + 4) return i;
     }
     return -1;
 }
@@ -5878,7 +5892,7 @@ function onDrawMove(e) {
     const ctx = drawCtx;
     let last = curStroke.p[curStroke.p.length - 1];
     let added = false;
-    if (curStroke.t !== 'highlighter') { applyStrokeStyle(curStroke); ctx.beginPath(); ctx.moveTo(last[0], last[1]); }
+    if (curStroke.t !== 'highlighter' && curStroke.t !== 'tape') { applyStrokeStyle(curStroke); ctx.beginPath(); ctx.moveTo(last[0], last[1]); }
     for (const ev of evs) {
         const [x, y] = getDrawPos(ev);
         if (Math.hypot(x - last[0], y - last[1]) < 0.6) continue;
@@ -5889,7 +5903,7 @@ function onDrawMove(e) {
         added = true;
     }
     if (!added) return;
-    if (curStroke.t === 'highlighter') redrawStrokes();
+    if (curStroke.t === 'highlighter' || curStroke.t === 'tape') redrawStrokes();
     else ctx.stroke();
 }
 
@@ -7233,9 +7247,13 @@ function initScriptSwipe(day) {
     const goPrev = () => { if (day > 1) openScriptViewer((day - 2) * 2); };
     const penToolActive = () => { const c = document.getElementById('sdDrawCanvas'); return c && c.classList.contains('draw-active'); };
     vp.addEventListener('pointerdown', e => {
-        pts.set(e.pointerId, [e.clientX, e.clientY]);
-        if (pts.size === 2) { // 핀치 시작
-            const a = [...pts.values()]; pinch0 = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]); zoom0 = sdUserZoom; tracking = false; return;
+        // 핀치/팬/스와이프 제스처는 손가락(터치)만 추적 — 펜/마우스는 필기용이라 pts에 넣지 않음.
+        // (펜으로 그리는 중 손바닥이 닿아 두 포인터가 되면 '핀치'로 오인돼 화면이 확대되던 버그 방지)
+        if (e.pointerType === 'touch') {
+            pts.set(e.pointerId, [e.clientX, e.clientY]);
+            if (pts.size === 2) { // 두 손가락 = 핀치 시작
+                const a = [...pts.values()]; pinch0 = Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]); zoom0 = sdUserZoom; tracking = false; return;
+            }
         }
         // 펜/마우스(그리기 포인터)로 필기 도구가 켜져 있으면 그 포인터는 그리기용 → 제스처 무시.
         // 손가락은 펜이 선택돼 있어도 팬/스와이프 허용(암송 외우기처럼).
