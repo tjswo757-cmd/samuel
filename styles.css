@@ -678,9 +678,9 @@
     /* [왼쪽 하단] 플렉슬 스타일 툴바 (항상 노출 · 드래그 이동) */
     .flex-toolbar {
         position: fixed; bottom: 24px; left: 20px;
-        background: white; padding: 3px 6px; border-radius: 30px;
+        background: white; padding: 2px 5px; border-radius: 26px;
         box-shadow: 0 6px 22px rgba(0,0,0,0.18);
-        display: none; flex-direction: row; align-items: center; gap: 3px; z-index: 1001; border: 1px solid #eee;
+        display: none; flex-direction: row; align-items: center; gap: 2px; z-index: 1001; border: 1px solid #eee;
         flex-wrap: nowrap;                     /* 가로=한 줄 막대, 세로=한 열 (wrap 주면 폭이 접혀 항상 세로처럼 보임) */
     }
     .flex-toolbar.active { display: flex !important; } /* 전역 .active{display:block!important} 무력화 → flex 유지(가로/세로 전환 동작) */
@@ -690,11 +690,12 @@
     .flex-toolbar.vertical .ft-handle { transform: rotate(90deg); }
     .ft-handle { display: flex; align-items: center; justify-content: center; cursor: grab; color: #b8c0c9; padding: 0 2px; touch-action: none; -webkit-user-select: none; user-select: none; }
     .ft-handle:active { cursor: grabbing; }
-    .ft-sep { width: 1px; align-self: stretch; background: #e8eaed; margin: 4px 1px; }
-    .ft-preset svg.ft-pen-ico { width: 16px; height: 19px; }
+    .ft-handle svg { width: 12px; height: 17px; }
+    .ft-sep { width: 1px; align-self: stretch; background: #e8eaed; margin: 3px 1px; }
+    .ft-preset svg.ft-pen-ico { width: 14px; height: 16px; }
     .ft-preset { padding: 0; }
-    .ft-wrong { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: var(--error); cursor: pointer; padding: 0 8px; -webkit-user-select: none; user-select: none; white-space: nowrap; }
-    .ft-wrong input { width: 14px; height: 14px; accent-color: var(--error); margin: 0; }
+    .ft-wrong { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 700; color: var(--error); cursor: pointer; padding: 0 7px; -webkit-user-select: none; user-select: none; white-space: nowrap; }
+    .ft-wrong input { width: 12px; height: 12px; accent-color: var(--error); margin: 0; }
     .flex-toolbar.plowing-mode .ft-wrong { display: none; }
     /* 최소화: 드래그 핸들과 최소화 버튼만 남기고 나머지 도구 숨김 */
     .ft-min { color: #b8c0c9; }
@@ -707,9 +708,9 @@
     [data-theme="dark"] .ft-handle { color: #5b6675; }
     
     .flex-tool-btn {
-        width: 30px; height: 30px; box-sizing: border-box; border-radius: 50%; border: none; background: white; cursor: pointer; display: flex; justify-content: center; align-items: center; position: relative; transition: 0.2s; color: #555;
+        width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; border: none; background: white; cursor: pointer; display: flex; justify-content: center; align-items: center; position: relative; transition: 0.2s; color: #555;
     }
-    .flex-tool-btn svg { width: 17px; height: 17px; }
+    .flex-tool-btn svg { width: 14px; height: 14px; }
     .flex-tool-btn:hover { background-color: #f8f9fa; }
     .flex-tool-btn.active { background: #e8f4fd; color: var(--primary); border: 2px solid var(--primary); }
     .flex-tool-btn.toggled { background: #e8f4fd; color: var(--primary); border: 2px solid var(--primary); }
